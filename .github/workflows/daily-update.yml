@@ -2,9 +2,10 @@ name: Daily Dashboard Update
 
 on:
   schedule:
-    # At 21:30 Beijing time (13:30 UTC), every day
-      - cron: "40 3 * * *"    # 11:40 北京时间
-      - cron: "10 5 * * *"    # 13:10 北京时间
+    # At 11:40 Beijing time (03:40 UTC)
+    - cron: "40 3 * * *"
+    # At 13:10 Beijing time (05:10 UTC)
+    - cron: "10 5 * * *"
   workflow_dispatch:
 
 jobs:
