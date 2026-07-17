@@ -7,6 +7,9 @@ on:
     # At 13:10 Beijing time (05:10 UTC)
     - cron: "10 5 * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types:
+      - trigger-update
 
 jobs:
   update:
@@ -72,5 +75,3 @@ PYEOF
           git add index.html
           git diff --cached --quiet || git commit -m "chore: update ETF data $(date +'%Y-%m-%d')"
           git push
-
-# updated
