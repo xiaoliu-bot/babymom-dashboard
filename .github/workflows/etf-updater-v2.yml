@@ -1,0 +1,115 @@
+name: ETF Data Updater
+
+on:
+  schedule:
+    - cron: "40 3 * * *"
+    - cron: "10 5 * * *"
+  repository_dispatch:
+    types: [trigger-update]
+  workflow_dispatch:
+
+push:
+  branches: [main]
+  paths-ignore:
+    - ".github/workflows/etf-updater-v2.yml"
+
+concurrency:
+  group: etf-updater
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch ETF data
+        run: |
+          python3 << 'PYEOF'
+import urllib.request, json, datetime
+
+today = datetime.date.today().strftime('%Y-%m-%d')
+
+def get_etf_data(code):
+    url = f"https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=5"
+    req = urllib.request.Request(url, headers={"Referer": "https://fund.eastmoney.com/"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+
+codes = {
+    "159995": "芯片ETF",
+    "159870": "化工ETF",
+    "588050": "科创50ETF",
+    "515750": "科技50ETF",
+    "513180": "恒生科技ETF",
+}
+
+results = []
+for code, name in codes.items():
+    try:
+        d = get_etf_data(code)
+        items = d.get("Data", {}).get("LSJZList", [])
+        if items:
+            item = items[0]
+            results.append({
+                "name": name, "code": code,
+                "date": item["FSRQ"], "nav": item["DWJZ"],
+                "change": str(item["JZZZL"]) + "%",
+            })
+    except Exception as e:
+        results.append({"name": name, "code": code, "date": "N/A", "nav": "N/A", "change": "N/A"})
+
+etf_data = {"date": today, "etfs": results}
+with open("etf_data.json", "w") as f:
+    json.dump(etf_data, f, ensure_ascii=False, indent=2)
+
+print("FETCHED:", json.dumps(etf_data, ensure_ascii=False))
+PYEOF
+      - name: Write api/etf.json
+        run: |
+          mkdir -p api
+          cp etf_data.json api/etf.json
+          cat api/etf.json
+      - name: Update index.html
+        run: |
+          python3 << 'PYEOF'
+import json, re
+
+with open("etf_data.json") as f:
+    data = json.load(f)
+
+with open("index.html") as f:
+    html = f.read()
+
+rows = ""
+for etf in data["etfs"]:
+    change = etf["change"]
+    color = "green" if change.startswith("+") else "red" if change.startswith("-") else "gray"
+    sign = "+" if not change.startswith(("-", "+")) else ""
+    rows += f'<tr><td>{etf["name"]}</td><td>{etf["code"]}</td><td>{etf["date"]}</td><td>{etf["nav"]}</td><td style="color:{color};font-weight:bold">{sign}{change}</td></tr>\n'
+
+marker = f'<!-- AUTO-UPDATED {data["date"]} -->\n<script>window.AUTO_ETF={json.dumps(data,ensure_ascii=False)};</script>'
+if "AUTO_ETF" in html:
+    html = re.sub(r'<!-- AUTO-UPDATED .*? -->[\s]*<script>window\.AUTO_ETF.*?</script>', marker, html, flags=re.DOTALL)
+else:
+    html = html.replace("</body>", marker + "\n</body>")
+
+with open("index.html", "w") as f:
+    f.write(html)
+
+print(f"Updated index.html with {len(data['etfs'])} ETFs")
+PYEOF
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html api/etf.json
+          git diff --cached --quiet && echo "NO_CHANGES" || (git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && git push)
