@@ -9,19 +9,18 @@ on:
   repository_dispatch:
     types:
       - trigger-update
+  workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout repo
+      - name: Checkout repo (full)
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT }}
-          sparse-checkout: |
-            index.html
-            api/etf.json
-          sparse-checkout-cone-mode: false
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -70,7 +69,7 @@ with open("etf_data.json", "w") as f:
 
 print("Fetched:", json.dumps(etf_data, ensure_ascii=False))
 PYEOF
-      - name: Update api/etf.json
+      - name: Write api/etf.json
         run: |
           python3 << 'PYEOF'
 import json, os
@@ -78,7 +77,6 @@ import json, os
 with open("etf_data.json") as f:
     data = json.load(f)
 
-# Write to api/etf.json
 os.makedirs("api", exist_ok=True)
 with open("api/etf.json", "w") as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
@@ -121,7 +119,7 @@ print(f"Updated index.html with {len(data['etfs'])} ETFs")
 PYEOF
       - name: Commit and push
         run: |
-          git config user.name "OpenClaw Bot"
-          git config user.email "openclaw@agent"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html api/etf.json
-          git diff --cached --quiet && echo "No changes" || (git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && git push)
+          git diff --cached --quiet && echo "NO_CHANGES" || git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && git push
