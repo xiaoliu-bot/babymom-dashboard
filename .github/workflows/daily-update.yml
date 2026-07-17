@@ -72,3 +72,5 @@ PYEOF
           git add index.html
           git diff --cached --quiet || git commit -m "chore: update ETF data $(date +'%Y-%m-%d')"
           git push
+
+# updated
