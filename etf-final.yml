@@ -1,4 +1,4 @@
-name: ETF Auto Updater
+name: ETF Data Updater
 
 on:
   schedule:
@@ -89,16 +89,13 @@ for etf in data["etfs"]:
     change = etf["change"]
     color = "green" if change.startswith("+") else "red" if change.startswith("-") else "gray"
     sign = "+" if not change.startswith(("-", "+")) else ""
-    rows += f"<tr><td>{etf['name']}</td><td>{etf['code']}</td><td>{etf['date']}</td><td>{etf['nav']}</td><td style="color:{color};font-weight:bold">{sign}{change}</td></tr>
-"
+    rows += f"<tr><td>{etf['name']}</td><td>{etf['code']}</td><td>{etf['date']}</td><td>{etf['nav']}</td><td style=\"color:{color};font-weight:bold\">{sign}{change}</td></tr>\n"
 
-marker = f'<!-- AUTO-UPDATED {data["date"]} -->
-<script>window.AUTO_ETF={json.dumps(data,ensure_ascii=False)};</script>'
+marker = f'<!-- AUTO-UPDATED {data["date"]} -->\n<script>window.AUTO_ETF={json.dumps(data,ensure_ascii=False)};</script>'
 if "AUTO_ETF" in html:
     html = re.sub(r'<!-- AUTO-UPDATED .*? -->[\s]*<script>window\.AUTO_ETF.*?</script>', marker, html, flags=re.DOTALL)
 else:
-    html = html.replace("</body>", marker + "
-</body>")
+    html = html.replace("</body>", marker + "\n</body>")
 
 with open("index.html", "w") as f:
     f.write(html)

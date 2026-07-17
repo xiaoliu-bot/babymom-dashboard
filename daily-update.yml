@@ -1,32 +1,31 @@
-name: ETF Auto Updater
+name: Daily Dashboard Update
 
 on:
   schedule:
+    # At 11:40 Beijing time (03:40 UTC)
     - cron: "40 3 * * *"
+    # At 13:10 Beijing time (05:10 UTC)
     - cron: "10 5 * * *"
   repository_dispatch:
-    types: [trigger-update]
+    types:
+      - trigger-update
   workflow_dispatch:
-
-concurrency:
-  group: etf-updater
-  cancel-in-progress: true
 
 jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout repo
+      - name: Checkout repo (full)
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT }}
-          fetch-depth: 1
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Fetch ETF data
+      - name: Fetch latest ETF data
         run: |
           python3 << 'PYEOF'
 import urllib.request, json, datetime
@@ -55,8 +54,10 @@ for code, name in codes.items():
         if items:
             item = items[0]
             results.append({
-                "name": name, "code": code,
-                "date": item["FSRQ"], "nav": item["DWJZ"],
+                "name": name,
+                "code": code,
+                "date": item["FSRQ"],
+                "nav": item["DWJZ"],
                 "change": str(item["JZZZL"]) + "%",
             })
     except Exception as e:
@@ -66,13 +67,22 @@ etf_data = {"date": today, "etfs": results}
 with open("etf_data.json", "w") as f:
     json.dump(etf_data, f, ensure_ascii=False, indent=2)
 
-print("FETCHED:", json.dumps(etf_data, ensure_ascii=False))
+print("Fetched:", json.dumps(etf_data, ensure_ascii=False))
 PYEOF
       - name: Write api/etf.json
         run: |
-          mkdir -p api
-          cp etf_data.json api/etf.json
-          cat api/etf.json
+          python3 << 'PYEOF'
+import json, os
+
+with open("etf_data.json") as f:
+    data = json.load(f)
+
+os.makedirs("api", exist_ok=True)
+with open("api/etf.json", "w") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+print(f"Written api/etf.json with {len(data['etfs'])} ETFs")
+PYEOF
       - name: Update index.html
         run: |
           python3 << 'PYEOF'
@@ -87,18 +97,20 @@ with open("index.html") as f:
 rows = ""
 for etf in data["etfs"]:
     change = etf["change"]
-    color = "green" if change.startswith("+") else "red" if change.startswith("-") else "gray"
-    sign = "+" if not change.startswith(("-", "+")) else ""
-    rows += f"<tr><td>{etf['name']}</td><td>{etf['code']}</td><td>{etf['date']}</td><td>{etf['nav']}</td><td style="color:{color};font-weight:bold">{sign}{change}</td></tr>
-"
+    if change.startswith("+"):
+        color = "green"
+    elif change.startswith("-"):
+        color = "red"
+    else:
+        color = "gray"
+    sign = "+" if not change.startswith(("+", "-")) else ""
+    rows += f'<tr><td>{etf["name"]}</td><td>{etf["code"]}</td><td>{etf["date"]}</td><td>{etf["nav"]}</td><td style="color:{color};font-weight:bold">{sign}{change}</td></tr>\n'
 
-marker = f'<!-- AUTO-UPDATED {data["date"]} -->
-<script>window.AUTO_ETF={json.dumps(data,ensure_ascii=False)};</script>'
+marker = f'<!-- AUTO-UPDATED {data["date"]} -->\n<script>window.AUTO_ETF={json.dumps(data,ensure_ascii=False)};</script>'
 if "AUTO_ETF" in html:
     html = re.sub(r'<!-- AUTO-UPDATED .*? -->[\s]*<script>window\.AUTO_ETF.*?</script>', marker, html, flags=re.DOTALL)
 else:
-    html = html.replace("</body>", marker + "
-</body>")
+    html = html.replace("</body>", marker + "\n</body>")
 
 with open("index.html", "w") as f:
     f.write(html)
@@ -110,4 +122,4 @@ PYEOF
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html api/etf.json
-          git diff --cached --quiet && echo "NO_CHANGES" || (git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && git push)
+          git diff --cached --quiet && echo "NO_CHANGES" || git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && git push
