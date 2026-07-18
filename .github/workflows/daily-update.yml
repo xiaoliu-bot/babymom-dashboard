@@ -85,7 +85,7 @@ jobs:
           with open('etf_data.json', 'w', encoding='utf-8') as f:
               json.dump(etf_data, f, ensure_ascii=False, indent=2)
           print('etf_data.json written OK', flush=True)
-        PYEOF
+   
           echo "STEP3-WRITE-JSON-DONE"
 
       - name: 更新 index.html
