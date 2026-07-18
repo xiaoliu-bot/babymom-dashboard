@@ -92,7 +92,7 @@ jobs:
         run: |
           echo "STEP4-UPDATE-HTML-START"
           python3 << 'PYEOF'
-import json, re
+
 with open('etf_data.json', encoding='utf-8') as f:
     data = json.load(f)
 with open('index.html', encoding='utf-8') as f:
