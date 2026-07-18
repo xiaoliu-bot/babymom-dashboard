@@ -11,7 +11,7 @@ on:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: write
 
@@ -26,84 +26,126 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 环境诊断
+      - name: 获取并更新 ETF 数据
         run: |
-          echo "STEP1-ENV pwd=$(pwd) python=$(python3 --version 2>&1) curl=$(curl --version | head -1)"
+          set -e
+          echo "=== [1] 开始获取 ETF 数据 ==="
+          python3 --version
+          python3 << 'PYEOF'
+import urllib.request, json, datetime, sys, os
 
-      - name: 获取 ETF 数据
+today = datetime.date.today().strftime('%Y-%m-%d')
+print("今日日期: " + today)
+
+def get_etf_data(code):
+    url = "https://api.fund.eastmoney.com/f10/lsjz?fundCode=" + code + "&pageIndex=1&pageSize=5"
+    req = urllib.request.Request(url, headers={"Referer": "https://fund.eastmoney.com/"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read())
+
+codes = {
+    "159995": "芯片ETF",
+    "159870": "化工ETF",
+    "588050": "科创50ETF",
+    "515750": "科技50ETF",
+    "513180": "恒生科技ETF",
+}
+
+results = []
+ok_count = 0
+for code, name in codes.items():
+    try:
+        d = get_etf_data(code)
+        items = d.get("Data", {}).get("LSJZList", [])
+        if items:
+            item = items[0]
+            results.append({
+                "name": name,
+                "code": code,
+                "date": item["FSRQ"],
+                "nav": item["DWJZ"],
+                "change": str(item["JZZZL"]) + "%"
+            })
+            ok_count += 1
+            print("OK " + name + ": " + item["FSRQ"] + " nav=" + item["DWJZ"] + " change=" + str(item["JZZZL"]) + "%")
+        else:
+            results.append({"name": name, "code": code, "date": "N/A", "nav": "N/A", "change": "N/A"})
+            print("EMPTY " + name)
+    except Exception as e:
+        results.append({"name": name, "code": code, "date": "N/A", "nav": "N/A", "change": "N/A"})
+        print("FAIL " + name + ": " + str(e))
+
+print("成功抓取: " + str(ok_count) + "/" + str(len(codes)))
+
+etf_data = {"date": today, "etfs": results}
+with open("etf_data.json", "w", encoding="utf-8") as f:
+    json.dump(etf_data, f, ensure_ascii=False, indent=2)
+print("etf_data.json 已写入")
+PYEOF
+          echo "=== [1] 完成 ==="
+
+      - name: 更新文件并提交
         run: |
-          import json
-          import datetime
-          import urllib.request
+          set -e
+          echo "=== [2] 更新文件 ==="
+          pwd
+          ls -la etf_data.json 2>/dev/null || echo "etf_data.json 不存在"
+          python3 << 'PYEOF'
+import json, os, re, datetime
 
-          today = datetime.date.today().strftime('%Y-%m-%d')
+with open("etf_data.json", encoding="utf-8") as f:
+    data = json.load(f)
+print("读取到 " + str(len(data["etfs"])) + " 条ETF数据")
 
-          def get_etf_data(code):
-              url = f"https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=5"
-              req = urllib.request.Request(
-                  url,
-                  headers={"Referer": "https://fund.eastmoney.com/"}
-              )
-              with urllib.request.urlopen(req, timeout=15) as r:
-                  return json.loads(r.read())
+os.makedirs("api", exist_ok=True)
+with open("api/etf.json", "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+print("api/etf.json 已更新")
 
-          # 将 codes 定义移到这里，用多行字典，避免 YAML 解析错误
-          codes = {
-              "159995": "芯片ETF",
-              "159870": "化工ETF",
-              "588050": "科创50ETF",
-              "515750": "科技50ETF",
-              "513180": "恒生科技ETF",
-          }
+with open("index.html", encoding="utf-8") as f:
+    html = f.read()
 
-          results = []
-          for code, name in codes.items():
-              try:
-                  d = get_etf_data(code)
-                  items = d.get("Data", {}).get("LSJZList", [])
-                  if items:
-                      item = items[0]
-                      results.append({
-                          "name": name,
-                          "code": code,
-                          "date": item["FSRQ"],
-                          "nav": item["DWJZ"],
-                          "change": str(item["JZZL"]) + "%"
-                      })
-                      print('OK ' + name + ': ' + item['FSRQ'] + ' ' + item['DWJZ'], flush=True)
-                  else:
-                      print('EMPTY ' + name, flush=True)
-                      results.append({"name": name, "code": code, "date": 'N/A', "nav": 'N/A', "change": 'N/A'})
-              except Exception as e:
-                  print('FAIL ' + name + ': ' + str(e), flush=True)
-                  results.append({"name": name, "code": code, "date": 'N/A', "nav": 'N/A', "change": 'N/A'})
+rows = ""
+for etf in data["etfs"]:
+    change = etf["change"]
+    color = "green" if change.startswith("+") else "red" if change.startswith("-") else "gray"
+    sign = "+" if not change.startswith(("+", "-")) else ""
+    rows += "<tr><td>" + etf["name"] + "</td><td>" + etf["code"] + "</td><td>" + etf["date"] + "</td><td>" + etf["nav"] + "</td><td style=color:" + color + ";font-weight:bold>" + sign + change + "</td></tr>\n"
 
-          ok = sum(1 for r in results if r['date'] != 'N/A')
-          print('TOTAL_OK=' + str(ok) + '/' + str(len(results)), flush=True)
+marker = "<!-- AUTO_UPDATE " + data["date"] + " -->\n<script>window.AUTO_ETF=" + json.dumps(data, ensure_ascii=False) + ";</script>"
 
-          etf_data = {'date': today, 'etfs': results}
-          with open('etf_data.json', 'w', encoding='utf-8') as f:
-              json.dump(etf_data, f, ensure_ascii=False, indent=2)
-          print('etf_data.json written OK', flush=True)
-   
-          echo "STEP3-WRITE-JSON-DONE"
+if "AUTO_ETF" in html:
+    html = re.sub(r"<!-- AUTO_UPDATE.*?-->\s*<script>window\.AUTO_ETF.*?</script>", marker, html, flags=re.DOTALL)
+    print("已替换 HTML 中的 AUTO_ETF 标记")
+else:
+    html = html.replace("</body>", marker + "\n</body>")
+    print("已追加 AUTO_ETF 标记")
 
-      - name: 更新 index.html
+if "数据更新时间" in html:
+    now_str = data["date"] + " " + datetime.datetime.now().strftime("%H:%M")
+    html = re.sub(r"数据更新时间：[0-9-]+ [0-9:]+", "数据更新时间：" + now_str, html)
+    print("已更新静态更新时间文字")
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html)
+print("index.html 已更新")
+PYEOF
+          echo "=== [2] 文件更新完成 ==="
+
+      - name: 提交并推送
         run: |
-          echo "STEP4-UPDATE-HTML-START"
-          python3 .github/scripts/update_index.py
-          echo "STEP4-UPDATE-HTML-DONE"
-
-      - name: 提交与推送
-        run: |
-          echo "STEP5-GIT-START"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html api/etf.json
-          if git diff --cached --quiet; then
-            echo 'No changes to commit'
+          set -e
+          echo "=== [3] Git 提交推送 ==="
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html api/etf.json etf_data.json 2>/dev/null || true
+          CHANGES=$(git diff --cached --stat)
+          if [ -z "$CHANGES" ]; then
+            echo "没有变更，无需提交"
           else
-            git commit -m 'chore: update ETF data '2026-07-18 16:51''
+            echo "变更内容: $CHANGES"
+            git commit -m "chore: update ETF data $(date '+%Y-%m-%d %H:%M')"
             git push
+            echo "推送成功"
           fi
-          echo "STEP5-GIT-DONE"
+          echo "=== [3] 完成 ==="
