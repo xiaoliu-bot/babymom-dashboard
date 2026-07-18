@@ -2,8 +2,8 @@ name: ETF Auto Update
 
 on:
   schedule:
-    - cron: "40 3 * * *"
-    - cron: "10 5 * * *"
+    - cron: "40 3 * * *"   # 北京时间 11:40
+    - cron: "10 5 * * *"   # 北京时间 13:10
   repository_dispatch:
     types: [trigger-update]
   workflow_dispatch:
@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -30,13 +31,18 @@ jobs:
       - name: Fetch ETF data
         run: |
           python3 << 'PYEOF'
-import urllib.request, json, datetime
+import urllib.request
+import json
+import datetime
 
 today = datetime.date.today().strftime('%Y-%m-%d')
 
 def get_etf_data(code):
     url = f'https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=5'
-    req = urllib.request.Request(url, headers={'Referer': 'https://fund.eastmoney.com/'})
+    req = urllib.request.Request(
+        url,
+        headers={'Referer': 'https://fund.eastmoney.com/'}
+    )
     with urllib.request.urlopen(req, timeout=15) as r:
         return json.loads(r.read())
 
@@ -62,28 +68,37 @@ for code, name in codes.items():
                 'nav': item['DWJZ'],
                 'change': str(item['JZZZL']) + '%',
             })
-    except Exception as e:
-        results.append({'name': name, 'code': code, 'date': 'N/A', 'nav': 'N/A', 'change': 'N/A'})
+    except Exception:
+        results.append({
+            'name': name,
+            'code': code,
+            'date': 'N/A',
+            'nav': 'N/A',
+            'change': 'N/A'
+        })
 
 etf_data = {'date': today, 'etfs': results}
-with open('etf_data.json', 'w') as f:
+with open('etf_data.json', 'w', encoding='utf-8') as f:
     json.dump(etf_data, f, ensure_ascii=False, indent=2)
+
 print('Fetched:', json.dumps(etf_data, ensure_ascii=False))
 PYEOF
 
       - name: Update dashboard files
         run: |
           python3 << 'PYEOF'
-import json, re, os
+import json
+import re
+import os
 
-with open('etf_data.json') as f:
+with open('etf_data.json', encoding='utf-8') as f:
     data = json.load(f)
 
 os.makedirs('api', exist_ok=True)
-with open('api/etf.json', 'w') as f:
+with open('api/etf.json', 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
-with open('index.html') as f:
+with open('index.html', encoding='utf-8') as f:
     html = f.read()
 
 rows = ''
@@ -91,17 +106,35 @@ for etf in data['etfs']:
     chg = etf['change']
     color = 'green' if chg.startswith('+') else 'red' if chg.startswith('-') else 'gray'
     sign = '+' if not chg.startswith(('+', '-')) else ''
-    rows += '<tr><td>' + etf['name'] + '</td><td>' + etf['code'] + '</td><td>' + etf['date'] + '</td><td>' + etf['nav'] + '</td><td style="color:' + color + ';font-weight:bold">' + sign + chg + '</td></tr>\n'
+    rows += (
+        f'<tr>'
+        f'<td>{etf["name"]}</td>'
+        f'<td>{etf["code"]}</td>'
+        f'<td>{etf["date"]}</td>'
+        f'<td>{etf["nav"]}</td>'
+        f'<td style="color:{color};font-weight:bold">{sign}{chg}</td>'
+        f'</tr>\n'
+    )
 
-marker = '<!-- AUTO-UPDATED ' + data['date'] + ' -->\n<script>window.AUTO_ETF=' + json.dumps(data, ensure_ascii=False) + ';</script>'
+marker = (
+    f'<!-- AUTO-UPDATED {data["date"]} -->\n'
+    f'<script>window.AUTO_ETF={json.dumps(data, ensure_ascii=False)};</script>'
+)
+
 if 'AUTO_ETF' in html:
-    html = re.sub(r'<!-- AUTO-UPDATED .*? -->\s*<script>window\.AUTO_ETF.*?</script>', marker, html, flags=re.DOTALL)
+    html = re.sub(
+        r'<!-- AUTO-UPDATED .*? -->\s*<script>window\.AUTO_ETF.*?</script>',
+        marker,
+        html,
+        flags=re.DOTALL
+    )
 else:
     html = html.replace('</body>', marker + '\n</body>')
 
-with open('index.html', 'w') as f:
+with open('index.html', 'w', encoding='utf-8') as f:
     f.write(html)
-print('Updated index.html with ' + str(len(data['etfs'])) + ' ETFs')
+
+print(f'Updated index.html with {len(data["etfs"])} ETFs')
 PYEOF
 
       - name: Commit and push
@@ -109,4 +142,6 @@ PYEOF
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html api/etf.json
-          git diff --cached --quiet && echo "NO_CHANGES" || git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && git push
+          git diff --cached --quiet && echo "NO_CHANGES" || \
+          git commit -m "chore: update ETF data $(date +'%Y-%m-%d %H:%M')" && \
+          git push
