@@ -25,104 +25,16 @@ jobs:
           python-version: "3.11"
 
       - name: 获取 ETF 数据
-        run: |
-          cat > fetch_etf.py << 'SCRIPT'
-import urllib.request, json, datetime, os
-
-today = datetime.date.today().strftime('%Y-%m-%d')
-print("今日: " + today)
-
-def get_etf_data(code):
-    url = "https://api.fund.eastmoney.com/f10/lsjz?fundCode=" + code + "&pageIndex=1&pageSize=5"
-    req = urllib.request.Request(url, headers={"Referer": "https://fund.eastmoney.com/"})
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.loads(r.read())
-
-codes = {
-    "159995": "芯片ETF",
-    "159870": "化工ETF",
-    "588050": "科创50ETF",
-    "515750": "科技50ETF",
-    "513180": "恒生科技ETF",
-}
-
-results = []
-ok_count = 0
-for code, name in codes.items():
-    try:
-        d = get_etf_data(code)
-        items = d.get("Data", {}).get("LSJZList", [])
-        if items:
-            item = items[0]
-            results.append({
-                "name": name,
-                "code": code,
-                "date": item["FSRQ"],
-                "nav": item["DWJZ"],
-                "change": str(item["JZZZL"]) + "%"
-            })
-            ok_count += 1
-            print("OK " + name + ": " + item["FSRQ"] + " nav=" + item["DWJZ"] + " change=" + str(item["JZZZL"]) + "%")
-        else:
-            results.append({"name": name, "code": code, "date": "N/A", "nav": "N/A", "change": "N/A"})
-            print("EMPTY " + name)
-    except Exception as e:
-        results.append({"name": name, "code": code, "date": "N/A", "nav": "N/A", "change": "N/A"})
-        print("FAIL " + name + ": " + str(e))
-
-print("成功: " + str(ok_count) + "/" + str(len(codes)))
-
-etf_data = {"date": today, "etfs": results}
-with open("etf_data.json", "w", encoding="utf-8") as f:
-    json.dump(etf_data, f, ensure_ascii=False, indent=2)
-print("etf_data.json written OK")
-SCRIPT
-          python3 fetch_etf.py
+        run: python3 fetch_etf.py
 
       - name: 更新 index.html
-        run: |
-          cat > update_html.py << 'SCRIPT'
-import json, os, re, datetime
-
-with open("etf_data.json", encoding="utf-8") as f:
-    data = json.load(f)
-print("读取到 " + str(len(data["etfs"])) + " 条ETF数据")
-
-os.makedirs("api", exist_ok=True)
-with open("api/etf.json", "w", encoding="utf-8") as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
-print("api/etf.json written")
-
-with open("index.html", encoding="utf-8") as f:
-    html = f.read()
-
-rows = ""
-for etf in data["etfs"]:
-    change = etf["change"]
-    color = "green" if change.startswith("+") else "red" if change.startswith("-") else "gray"
-    sign = "+" if not change.startswith(("+", "-")) else ""
-    rows += "<tr><td>" + etf["name"] + "</td><td>" + etf["code"] + "</td><td>" + etf["date"] + "</td><td>" + etf["nav"] + "</td><td style=color:" + color + ";font-weight:bold>" + sign + change + "</td></tr>\n"
-
-marker = "<!-- AUTO_UPDATE " + data["date"] + " -->\n<script>window.AUTO_ETF=" + json.dumps(data, ensure_ascii=False) + ";</script>"
-
-if "AUTO_ETF" in html:
-    html = re.sub(r"<!-- AUTO_UPDATE.*?-->\s*<script>window\.AUTO_ETF.*?</script>", marker, html, flags=re.DOTALL)
-    print("替换 AUTO_ETF 标记")
-else:
-    html = html.replace("</body>", marker + "\n</body>")
-    print("追加 AUTO_ETF 标记")
-
-if "数据更新时间" in html:
-    now_str = data["date"] + " " + datetime.datetime.now().strftime("%H:%M")
-    html = re.sub(r"数据更新时间：[0-9-]+ [0-9:]+", "数据更新时间：" + now_str, html)
-    print("更新静态时间文字")
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html)
-print("index.html written OK")
-SCRIPT
-          python3 update_html.py
+        run: python3 update_html.py
 
       - name: 提交并推送
         run: |
           git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html api/etf.json etf_data.json
+          git diff --cached --stat
+          git commit -m "chore: update ETF data $(date '+%Y-%m-%d %H:%M')" || echo "no changes"
+          git push || echo "push failed"
