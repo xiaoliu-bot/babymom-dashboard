@@ -1,0 +1,14 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hello" && python3 --version && date
+      - run: |
+          python3 -c "print('test ok')"
+          echo "TEST_SUCCESS"
