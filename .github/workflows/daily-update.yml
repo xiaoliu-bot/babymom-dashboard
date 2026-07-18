@@ -32,53 +32,60 @@ jobs:
 
       - name: 获取 ETF 数据
         run: |
-          echo "STEP2-FETCH-START"
-          python3 << 'PYEOF'
-          import urllib.request, json, datetime, sys
-          today = datetime.date.today().strftime('%Y-%m-%d')
-          print('today=' + today, flush=True)
-def get_etf_data(code):
-    url = 'https://api.fund.eastmoney.com/f10/lsjz?fundCode=' + code + '&pageIndex=1&pageSize=5'
-    req = urllib.request.Request(url, headers={'Referer': 'https://fund.eastmoney.com/'})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read())
-codes = {'159995':'芯片ETF','159870':'化工ETF','588050':'科创50ETF','515750':'科技50ETF','513180':'恒生科技ETF'}
-results = []
-for code, name in codes.items():
-    try:
-        d = get_etf_data(code)
-        items = d.get('Data',{}).get('LSJZList',[])
-        if items:
-            item = items[0]
-            results.append({'name':name,'code':code,'date':item['FSRQ'],'nav':item['DWJZ'],'change':str(item['JZZZL'])+'%'})
-            print('OK ' + name + ': ' + item['FSRQ'] + ' ' + item['DWJZ'], flush=True)
-        else:
-            print('EMPTY ' + name, flush=True)
-            results.append({'name':name,'code':code,'date':'N/A','nav':'N/A','change':'N/A'})
-    except Exception as e:
-        print('FAIL ' + name + ': ' + str(e), flush=True)
-        results.append({'name':name,'code':code,'date':'N/A','nav':'N/A','change':'N/A'})
-ok = sum(1 for r in results if r['date'] != 'N/A')
-print('TOTAL_OK=' + str(ok) + '/' + str(len(results)), flush=True)
-etf_data = {'date': today, 'etfs': results}
-with open('etf_data.json','w',encoding='utf-8') as f:
-    json.dump(etf_data, f, ensure_ascii=False, indent=2)
-print('etf_data.json written OK', flush=True)
-PYEOF
-          echo "STEP2-FETCH-DONE"
+          import json
+          import datetime
+          import urllib.request
 
-      - name: 写入 api/etf.json
-        run: |
-          echo "STEP3-WRITE-JSON-START"
-          python3 << 'PYEOF'
-import json, os
-with open('etf_data.json', encoding='utf-8') as f:
-    data = json.load(f)
-os.makedirs('api', exist_ok=True)
-with open('api/etf.json', 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
-print('api/etf.json written')
-PYEOF
+          today = datetime.date.today().strftime('%Y-%m-%d')
+
+          def get_etf_data(code):
+              url = f"https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=5"
+              req = urllib.request.Request(
+                  url,
+                  headers={"Referer": "https://fund.eastmoney.com/"}
+              )
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  return json.loads(r.read())
+
+          # 将 codes 定义移到这里，用多行字典，避免 YAML 解析错误
+          codes = {
+              "159995": "芯片ETF",
+              "159870": "化工ETF",
+              "588050": "科创50ETF",
+              "515750": "科技50ETF",
+              "513180": "恒生科技ETF",
+          }
+
+          results = []
+          for code, name in codes.items():
+              try:
+                  d = get_etf_data(code)
+                  items = d.get("Data", {}).get("LSJZList", [])
+                  if items:
+                      item = items[0]
+                      results.append({
+                          "name": name,
+                          "code": code,
+                          "date": item["FSRQ"],
+                          "nav": item["DWJZ"],
+                          "change": str(item["JZZL"]) + "%"
+                      })
+                      print('OK ' + name + ': ' + item['FSRQ'] + ' ' + item['DWJZ'], flush=True)
+                  else:
+                      print('EMPTY ' + name, flush=True)
+                      results.append({"name": name, "code": code, "date": 'N/A', "nav": 'N/A', "change": 'N/A'})
+              except Exception as e:
+                  print('FAIL ' + name + ': ' + str(e), flush=True)
+                  results.append({"name": name, "code": code, "date": 'N/A', "nav": 'N/A', "change": 'N/A'})
+
+          ok = sum(1 for r in results if r['date'] != 'N/A')
+          print('TOTAL_OK=' + str(ok) + '/' + str(len(results)), flush=True)
+
+          etf_data = {'date': today, 'etfs': results}
+          with open('etf_data.json', 'w', encoding='utf-8') as f:
+              json.dump(etf_data, f, ensure_ascii=False, indent=2)
+          print('etf_data.json written OK', flush=True)
+        PYEOF
           echo "STEP3-WRITE-JSON-DONE"
 
       - name: 更新 index.html
