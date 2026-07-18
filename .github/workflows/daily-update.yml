@@ -29,15 +29,13 @@ jobs:
       - name: 获取 ETF 数据
         run: |
           python3 << 'PYEOF'
-import urllib.request
-import json
-import datetime
-
-today = datetime.date.today().strftime('%Y-%m-%d')
+          import urllib.request
+          import jsonimport datetime
+          today = datetime.date.today().strftime('%Y-%m-%d')
 
 def get_etf_data(code):
-    url = f"https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=5"
-    req = urllib.request.Request(
+     url = f"https://api.fund.eastmoney.com/f10/lsjz?fundCode={code}&pageIndex=1&pageSize=5"
+     req = urllib.request.Request(
         url,
         headers={"Referer": "https://fund.eastmoney.com/"}
     )
