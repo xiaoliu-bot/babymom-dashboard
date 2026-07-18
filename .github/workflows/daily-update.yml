@@ -24,16 +24,13 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 获取并更新 ETF 数据
+      - name: 获取 ETF 数据
         run: |
-          set -e
-          echo "=== [1] 开始获取 ETF 数据 ==="
-          python3 --version
-          python3 << 'PYEOF'
-import urllib.request, json, datetime, sys, os
+          cat > fetch_etf.py << 'SCRIPT'
+import urllib.request, json, datetime, os
 
 today = datetime.date.today().strftime('%Y-%m-%d')
-print("今日日期: " + today)
+print("今日: " + today)
 
 def get_etf_data(code):
     url = "https://api.fund.eastmoney.com/f10/lsjz?fundCode=" + code + "&pageIndex=1&pageSize=5"
@@ -73,22 +70,18 @@ for code, name in codes.items():
         results.append({"name": name, "code": code, "date": "N/A", "nav": "N/A", "change": "N/A"})
         print("FAIL " + name + ": " + str(e))
 
-print("成功抓取: " + str(ok_count) + "/" + str(len(codes)))
+print("成功: " + str(ok_count) + "/" + str(len(codes)))
 
 etf_data = {"date": today, "etfs": results}
 with open("etf_data.json", "w", encoding="utf-8") as f:
     json.dump(etf_data, f, ensure_ascii=False, indent=2)
-print("etf_data.json 已写入")
-PYEOF
-          echo "=== [1] 完成 ==="
+print("etf_data.json written OK")
+SCRIPT
+          python3 fetch_etf.py
 
-      - name: 更新文件并提交
+      - name: 更新 index.html
         run: |
-          set -e
-          echo "=== [2] 更新文件 ==="
-          pwd
-          ls -la etf_data.json 2>/dev/null || echo "etf_data.json 不存在"
-          python3 << 'PYEOF'
+          cat > update_html.py << 'SCRIPT'
 import json, os, re, datetime
 
 with open("etf_data.json", encoding="utf-8") as f:
@@ -98,7 +91,7 @@ print("读取到 " + str(len(data["etfs"])) + " 条ETF数据")
 os.makedirs("api", exist_ok=True)
 with open("api/etf.json", "w", encoding="utf-8") as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
-print("api/etf.json 已更新")
+print("api/etf.json written")
 
 with open("index.html", encoding="utf-8") as f:
     html = f.read()
@@ -114,36 +107,22 @@ marker = "<!-- AUTO_UPDATE " + data["date"] + " -->\n<script>window.AUTO_ETF=" +
 
 if "AUTO_ETF" in html:
     html = re.sub(r"<!-- AUTO_UPDATE.*?-->\s*<script>window\.AUTO_ETF.*?</script>", marker, html, flags=re.DOTALL)
-    print("已替换 HTML 中的 AUTO_ETF 标记")
+    print("替换 AUTO_ETF 标记")
 else:
     html = html.replace("</body>", marker + "\n</body>")
-    print("已追加 AUTO_ETF 标记")
+    print("追加 AUTO_ETF 标记")
 
 if "数据更新时间" in html:
     now_str = data["date"] + " " + datetime.datetime.now().strftime("%H:%M")
     html = re.sub(r"数据更新时间：[0-9-]+ [0-9:]+", "数据更新时间：" + now_str, html)
-    print("已更新静态更新时间文字")
+    print("更新静态时间文字")
 
 with open("index.html", "w", encoding="utf-8") as f:
     f.write(html)
-print("index.html 已更新")
-PYEOF
-          echo "=== [2] 文件更新完成 ==="
+print("index.html written OK")
+SCRIPT
+          python3 update_html.py
 
       - name: 提交并推送
         run: |
-          set -e
-          echo "=== [3] Git 提交推送 ==="
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html api/etf.json etf_data.json 2>/dev/null || true
-          CHANGES=$(git diff --cached --stat)
-          if [ -z "$CHANGES" ]; then
-            echo "没有变更，无需提交"
-          else
-            echo "变更内容: $CHANGES"
-            git commit -m "chore: update ETF data $(date '+%Y-%m-%d %H:%M')"
-            git push
-            echo "推送成功"
-          fi
-          echo "=== [3] 完成 ==="
