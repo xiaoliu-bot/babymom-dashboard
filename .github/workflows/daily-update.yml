@@ -25,11 +25,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: 安装依赖
-        run: pip install tushare -q
-
-      - name: 获取数据（主Tushare → 备东方财富）
-        run: python3 fetch_tushare.py
+      - name: 获取数据（东方财富）
+        run: python3 fetch_data.py
 
       - name: 更新 HTML
         run: python3 update_html.py
@@ -40,5 +37,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add babymom-dashboard.html etf_data.json index_data.json
           git diff --cached --quiet || { echo "no changes"; exit 0; }
-          git commit -m "chore: 自动更新看板数据 $(date '+%Y-%m-%d %H:%M')"
+          git commit -m "chore: 自动更新看板 $(date '+%Y-%m-%d %H:%M')"
           git push
