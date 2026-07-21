@@ -17,17 +17,17 @@
       hstech: { name: '恒生科技',   code: 'HSTECH', price: 4231.67, change: +87.44, pct: +2.11 },
     },
     heatmapData: [
-      { name: '芯片',       ore: 105, dif: 92,  wov: 112, dbu: 35, cro: 90, total: 91, chg: +12 },
-      { name: '半导体',     ore: 90,  dif: 92,  wov: 92,  dbu: 60, cro: 90, total: 88, chg: 0 },
-      { name: '细分化工',   ore: 55,  dif: 60,  wov: 40,  dbu: 45, cro: 35, total: 50, chg: 0 },
-      { name: '科创创业AI', ore: 88,  dif: 85,  wov: 88,  dbu: 55, cro: 80, total: 82, chg: +8 },
-      { name: '机器人',     ore: 90,  dif: 113, wov: 10,  dbu: 53, cro: 44, total: 67, chg: +12 },
-      { name: '新能源电池', ore: 65,  dif: 55,  wov: 50,  dbu: 40, cro: 50, total: 55, chg: -5 },
-      { name: '恒生科技',   ore: 70,  dif: 75,  wov: 65,  dbu: 72, cro: 65, total: 70, chg: +15 },
-      { name: '创新药',     ore: 50,  dif: 70,  wov: 45,  dbu: 55, cro: 40, total: 58, chg: +5 },
-      { name: '锂矿',       ore: 60,  dif: 65,  wov: 55,  dbu: 48, cro: 55, total: 60, chg: -3 },
-      { name: 'CPO',        ore: 65,  dif: 82,  wov: 77,  dbu: 52, cro: 85, total: 77, chg: +11 },
-      { name: 'PCB',        ore: 80,  dif: 78,  wov: 70,  dbu: 60, cro: 75, total: 75, chg: +6 },
+      { name: '芯片',       ore: 105, dif: 92,  wov: 112, dbu: 35, zt: 60, hs: 80, dis: 85, total: 91, chg: +12 },
+      { name: '半导体',     ore: 90,  dif: 92,  wov: 92,  dbu: 60, zt: 55, hs: 75, dis: 80, total: 88, chg: 0 },
+      { name: '细分化工',   ore: 55,  dif: 60,  wov: 40,  dbu: 45, zt: 30, hs: 45, dis: 50, total: 50, chg: 0 },
+      { name: '科创创业AI', ore: 88,  dif: 85,  wov: 88,  dbu: 55, zt: 65, hs: 78, dis: 82, total: 82, chg: +8 },
+      { name: '机器人',     ore: 90,  dif: 113, wov: 10,  dbu: 53, zt: 60, hs: 70, dis: 78, total: 67, chg: +12 },
+      { name: '新能源电池', ore: 65,  dif: 55,  wov: 50,  dbu: 40, zt: 35, hs: 55, dis: 55, total: 55, chg: -5 },
+      { name: '恒生科技',   ore: 70,  dif: 75,  wov: 65,  dbu: 72, zt: 40, hs: 60, dis: 70, total: 70, chg: +15 },
+      { name: '创新药',     ore: 50,  dif: 70,  wov: 45,  dbu: 55, zt: 30, hs: 50, dis: 55, total: 58, chg: +5 },
+      { name: '锂矿',       ore: 60,  dif: 65,  wov: 55,  dbu: 48, zt: 35, hs: 55, dis: 55, total: 60, chg: -3 },
+      { name: 'CPO',        ore: 65,  dif: 82,  wov: 77,  dbu: 52, zt: 55, hs: 75, dis: 75, total: 77, chg: +11 },
+      { name: 'PCB',        ore: 80,  dif: 78,  wov: 70,  dbu: 60, zt: 50, hs: 70, dis: 72, total: 75, chg: +6 },
     ],
     valuationData: [
       { name: '半导体设备',  pe: 166.96, pePct: 96.36, pbPct: 99.36, peChg: -7.5 },
@@ -115,9 +115,9 @@
   function renderHeatmap(d) {
     const container = document.getElementById('heatmap-container');
     clearEl(container);
-    const headers = ['板块', 'ORE<br>拥挤度', '扩散力', '动摇度', 'D回补', '有拥挤度', '总分'];
-    const cols = ['name', 'ore', 'dif', 'wov', 'dbu', 'cro', 'total'];
-    container.style.gridTemplateColumns = '100px repeat(6, 1fr)';
+    const headers = ['板块', '拥挤度', '扩散力', '动摇度', 'D回补', '涨停密度', '换手度', '讨论度', '总分'];
+    const cols = ['name', 'ore', 'dif', 'wov', 'dbu', 'zt', 'hs', 'dis', 'total'];
+    container.style.gridTemplateColumns = '88px repeat(8, 1fr)';
     headers.forEach((htext) => {
       const th = document.createElement('div');
       th.className = 'heatmap-header';
