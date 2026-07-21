@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-07-21 22:50:38",
-  "source": "eastmoney-kline + custom",
+  "updatedAt": "2026-07-21 22:52:33",
+  "source": "eastmoney-kline + sentiment-engine",
   "indexData": {
     "sse": {
       "name": "上证指数",
@@ -34,9 +34,12 @@
       "dif": 92,
       "wov": 112,
       "dbu": 35,
-      "cro": 90,
+      "zt": 60,
+      "hs": 80,
+      "dis": 85,
       "total": 91,
-      "chg": 12
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "半导体",
@@ -44,8 +47,11 @@
       "dif": 92,
       "wov": 92,
       "dbu": 60,
-      "cro": 90,
+      "zt": 55,
+      "hs": 75,
+      "dis": 80,
       "total": 88,
+      "_fallback": true,
       "chg": 0
     },
     {
@@ -54,8 +60,11 @@
       "dif": 60,
       "wov": 40,
       "dbu": 45,
-      "cro": 35,
+      "zt": 30,
+      "hs": 45,
+      "dis": 50,
       "total": 50,
+      "_fallback": true,
       "chg": 0
     },
     {
@@ -64,9 +73,12 @@
       "dif": 85,
       "wov": 88,
       "dbu": 55,
-      "cro": 80,
+      "zt": 65,
+      "hs": 78,
+      "dis": 82,
       "total": 82,
-      "chg": 8
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "机器人",
@@ -74,9 +86,12 @@
       "dif": 113,
       "wov": 10,
       "dbu": 53,
-      "cro": 44,
+      "zt": 60,
+      "hs": 70,
+      "dis": 78,
       "total": 67,
-      "chg": 12
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "新能源电池",
@@ -84,9 +99,12 @@
       "dif": 55,
       "wov": 50,
       "dbu": 40,
-      "cro": 50,
+      "zt": 35,
+      "hs": 55,
+      "dis": 55,
       "total": 55,
-      "chg": -5
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "恒生科技",
@@ -94,9 +112,12 @@
       "dif": 75,
       "wov": 65,
       "dbu": 72,
-      "cro": 65,
+      "zt": 40,
+      "hs": 60,
+      "dis": 70,
       "total": 70,
-      "chg": 15
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "创新药",
@@ -104,9 +125,12 @@
       "dif": 70,
       "wov": 45,
       "dbu": 55,
-      "cro": 40,
+      "zt": 30,
+      "hs": 50,
+      "dis": 55,
       "total": 58,
-      "chg": 5
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "锂矿",
@@ -114,9 +138,12 @@
       "dif": 65,
       "wov": 55,
       "dbu": 48,
-      "cro": 55,
+      "zt": 35,
+      "hs": 55,
+      "dis": 55,
       "total": 60,
-      "chg": -3
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "CPO",
@@ -124,9 +151,12 @@
       "dif": 82,
       "wov": 77,
       "dbu": 52,
-      "cro": 85,
+      "zt": 55,
+      "hs": 75,
+      "dis": 75,
       "total": 77,
-      "chg": 11
+      "_fallback": true,
+      "chg": 0
     },
     {
       "name": "PCB",
@@ -134,9 +164,12 @@
       "dif": 78,
       "wov": 70,
       "dbu": 60,
-      "cro": 75,
+      "zt": 50,
+      "hs": 70,
+      "dis": 72,
       "total": 75,
-      "chg": 6
+      "_fallback": true,
+      "chg": 0
     }
   ],
   "valuationData": [
