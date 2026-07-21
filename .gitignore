@@ -1,0 +1,7 @@
+# 本地工具/缓存，不入库
+.workbuddy/
+node_modules/
+*.log
+.DS_Store
+
+# 注意：data.json 不要忽略！它由 GitHub Action 生成并提交，GitHub Pages 需要它

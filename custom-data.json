@@ -1,0 +1,35 @@
+{
+  "_说明": "自定义分析数据（东财/Tushare 给不了的部分）。改这里 → 下次 Action 运行后生效到 data.json。三个字段都可缺省，缺省时用脚本内置基线。",
+  "heatmapData": [
+    { "name": "芯片", "ore": 105, "dif": 92, "wov": 112, "dbu": 35, "cro": 90, "total": 91, "chg": 12 },
+    { "name": "半导体", "ore": 90, "dif": 92, "wov": 92, "dbu": 60, "cro": 90, "total": 88, "chg": 0 },
+    { "name": "细分化工", "ore": 55, "dif": 60, "wov": 40, "dbu": 45, "cro": 35, "total": 50, "chg": 0 },
+    { "name": "科创创业AI", "ore": 88, "dif": 85, "wov": 88, "dbu": 55, "cro": 80, "total": 82, "chg": 8 },
+    { "name": "机器人", "ore": 90, "dif": 113, "wov": 10, "dbu": 53, "cro": 44, "total": 67, "chg": 12 },
+    { "name": "新能源电池", "ore": 65, "dif": 55, "wov": 50, "dbu": 40, "cro": 50, "total": 55, "chg": -5 },
+    { "name": "恒生科技", "ore": 70, "dif": 75, "wov": 65, "dbu": 72, "cro": 65, "total": 70, "chg": 15 },
+    { "name": "创新药", "ore": 50, "dif": 70, "wov": 45, "dbu": 55, "cro": 40, "total": 58, "chg": 5 },
+    { "name": "锂矿", "ore": 60, "dif": 65, "wov": 55, "dbu": 48, "cro": 55, "total": 60, "chg": -3 },
+    { "name": "CPO", "ore": 65, "dif": 82, "wov": 77, "dbu": 52, "cro": 85, "total": 77, "chg": 11 },
+    { "name": "PCB", "ore": 80, "dif": 78, "wov": 70, "dbu": 60, "cro": 75, "total": 75, "chg": 6 }
+  ],
+  "valuationData": [
+    { "name": "半导体设备", "pe": 166.96, "pePct": 96.36, "pbPct": 99.36, "peChg": -7.5 },
+    { "name": "存储器/芯片", "pe": 141.01, "pePct": 95.48, "pbPct": 99.48, "peChg": -6.8 },
+    { "name": "半导体产业", "pe": 124.23, "pePct": 94.56, "pbPct": 97.54, "peChg": -7.2 },
+    { "name": "光模块CPO", "pe": 71.92, "pePct": 86.58, "pbPct": 99.32, "peChg": -9.6 },
+    { "name": "机器人概念", "pe": 58.40, "pePct": 72.30, "pbPct": 78.50, "peChg": 2.1 },
+    { "name": "恒生科技", "pe": 32.50, "pePct": 45.20, "pbPct": 55.80, "peChg": -3.4 },
+    { "name": "创新药", "pe": 38.70, "pePct": 38.50, "pbPct": 42.10, "peChg": 1.2 },
+    { "name": "新能源电池", "pe": 28.90, "pePct": 35.60, "pbPct": 48.20, "peChg": -1.8 }
+  ],
+  "sectorBreakdown": [
+    { "label": "AI芯片", "value": 17.43, "color": "#f85149" },
+    { "label": "半导体设备", "value": 19.90, "color": "#d29922" },
+    { "label": "晶圆制造", "value": 8.50, "color": "#a371f7" },
+    { "label": "存储芯片", "value": 15.29, "color": "#3fb950" },
+    { "label": "图像传感器", "value": 4.20, "color": "#58a6ff" },
+    { "label": "芯片IP/Chiplet", "value": 3.55, "color": "#79c0ff" },
+    { "label": "其他", "value": 31.13, "color": "#484f58" }
+  ]
+}

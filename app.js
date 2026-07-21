@@ -65,80 +65,20 @@
   };
 
   /* ============================================================
-   * B. API 适配层（拿到接口绑定方式后，主要改这里）
-   * ------------------------------------------------------------
-   * raw = 接口返回的原始 JSON（结构取决于你的接口）。
-   * 下面函数负责把它映射成页面内部统一模型。
-   * 只要返回的对象包含 indexData / heatmapData / valuationData /
-   * navHistory / sectorBreakdown 五个字段即可，缺哪个页面就留空。
+   * B. 取数：读 GitHub Action 生成的 data.json（同源）
+   *    data.json 不存在 / 拉取失败 → 回退内置演示数据
    * ============================================================ */
-  function transformApiResponse(raw) {
-    // TODO(接接口): 按真实 JSON 结构改写映射，例如：
-    // return {
-    //   indexData: {
-    //     sse:    { name: '上证指数', code: raw.sse.code, price: raw.sse.price, change: raw.sse.change, pct: raw.sse.pct },
-    //     ndx:    { ... },
-    //     hstech: { ... },
-    //   },
-    //   heatmapData:    raw.heatmap.map(x => ({ name: x.name, ore: x.ore, ... })),
-    //   valuationData:  raw.valuation,
-    //   navHistory:     raw.nav,
-    //   sectorBreakdown:raw.sectors,
-    // };
-    return raw; // 占位：若接口已直接返回标准结构，可保持原样
-  }
-
-  /* ============================================================
-   * C. 取数
-   * ============================================================ */
-  const isApiConfigured = () =>
-    CFG.API && CFG.API.baseUrl && !CFG.API.baseUrl.includes('YOUR-API-HOST');
-
-  async function fetchJson(url, headers, timeoutMs) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), timeoutMs || 10000);
-    try {
-      const res = await fetch(url, { headers: headers || {}, signal: ctrl.signal });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return await res.json();
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
   async function loadDashboardData() {
-    if (!isApiConfigured()) {
-      if (CFG.mockFallback) return { data: MOCK, source: 'mock' };
-      throw new Error('API 未配置且未开启 mock 兜底');
+    const file = (CFG && CFG.dataFile) || 'data.json';
+    try {
+      const res = await fetch(file + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      return { data, source: 'live' };
+    } catch (e) {
+      if (CFG && CFG.mockFallback) return { data: MOCK, source: 'mock' };
+      throw e;
     }
-
-    const { baseUrl, headers, combinedEndpoint, endpoints, timeoutMs } = CFG.API;
-    const h = headers || {};
-
-    // 单一聚合接口
-    if (combinedEndpoint) {
-      const raw = await fetchJson(baseUrl.replace(/\/$/, '') + combinedEndpoint, h, timeoutMs);
-      return { data: transformApiResponse(raw), source: 'api' };
-    }
-
-    // 分接口并发拉取
-    const [indexR, heatR, valR, navR, secR] = await Promise.allSettled([
-      fetchJson(baseUrl.replace(/\/$/, '') + endpoints.index, h, timeoutMs),
-      fetchJson(baseUrl.replace(/\/$/, '') + endpoints.heatmap, h, timeoutMs),
-      fetchJson(baseUrl.replace(/\/$/, '') + endpoints.valuation, h, timeoutMs),
-      fetchJson(baseUrl.replace(/\/$/, '') + endpoints.nav, h, timeoutMs),
-      fetchJson(baseUrl.replace(/\/$/, '') + endpoints.sectors, h, timeoutMs),
-    ]);
-
-    const pick = (r, fallback) => (r.status === 'fulfilled' ? r.value : fallback);
-    const raw = {
-      indexData: pick(indexR),
-      heatmapData: pick(heatR),
-      valuationData: pick(valR),
-      navHistory: pick(navR),
-      sectorBreakdown: pick(secR),
-    };
-    return { data: transformApiResponse(raw), source: 'api' };
   }
 
   /* ============================================================
@@ -256,7 +196,7 @@
       data: {
         labels: (d || []).map((x) => x.date),
         datasets: [{
-          label: '159995 净值',
+          label: '159995 收盘价',
           data: (d || []).map((x) => x.nav),
           borderColor: COLORS.blue,
           backgroundColor: 'rgba(31,111,235,0.08)',
@@ -268,7 +208,7 @@
       options: {
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `净值: ${ctx.parsed.y.toFixed(4)}` } },
+          tooltip: { callbacks: { label: (ctx) => `收盘价: ${ctx.parsed.y.toFixed(4)}` } },
         },
         scales: {
           x: { grid: { color: '#21262d' }, ticks: { maxTicksLimit: 10, font: { size: 10 } } },
@@ -343,7 +283,7 @@
       const now = new Date();
       lastRefreshDate = now.toISOString().slice(0, 10);
       const stamp = now.toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const srcTxt = source === 'api' ? '数据来源：API 实时' : '数据来源：内置演示数据（API 未配置）';
+      const srcTxt = source === 'live' ? '数据来源：收盘快照（data.json）' : '数据来源：内置演示数据（data.json 未生成）';
       setStatus(`数据更新时间：${stamp} &nbsp;|&nbsp; ${srcTxt}`, false);
     } catch (err) {
       setStatus('数据拉取失败：' + err.message + '（已保留上次数据）', true);
