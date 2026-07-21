@@ -363,20 +363,26 @@ async function main() {
       CPO: { ore: 65, dif: 82, wov: 77, dbu: 52, zt: 55, hs: 75, dis: 75, total: 77, chg: 11 },
       PCB: { ore: 80, dif: 78, wov: 70, dbu: 60, zt: 50, hs: 70, dis: 72, total: 75, chg: 6 },
     };
-    heatmapData = computed.map((r) => {
-      const base = BASE[r.name] || {};
-      const merged = r._fallback ? (prevMap.get(r.name) || base) : r;
-      const oldTotal = (prevMap.get(r.name) || {}).total;
-      const chg = (merged.total != null && oldTotal != null) ? Math.round(merged.total - oldTotal) : (base.chg || 0);
-      return {
-        name: r.name, board: merged.board,
-        ore: merged.ore ?? base.ore, dif: merged.dif ?? base.dif, wov: merged.wov ?? base.wov,
-        dbu: merged.dbu ?? base.dbu, zt: merged.zt ?? base.zt, hs: merged.hs ?? base.hs,
-        dis: merged.dis ?? base.dis, total: merged.total ?? base.total,
-        _fallback: r._fallback || undefined, chg,
-      };
-    });
-    console.log(`[mama] 计算完成，板块数=${heatmapData.length}`);
+    // 防护：本次全部回退（板块接口被封锁/限流）且历史已有数据 → 保留真实值，绝不用静态基线覆盖
+    if (computed.every((r) => r._fallback) && prev.heatmapData && prev.heatmapData.length) {
+      console.log('[mama] 本次全部回退且有历史数据 → 保留上一次 heatmapData，不覆盖');
+      heatmapData = prev.heatmapData;
+    } else {
+      heatmapData = computed.map((r) => {
+        const base = BASE[r.name] || {};
+        const merged = r._fallback ? (prevMap.get(r.name) || base) : r;
+        const oldTotal = (prevMap.get(r.name) || {}).total;
+        const chg = (merged.total != null && oldTotal != null) ? Math.round(merged.total - oldTotal) : (base.chg || 0);
+        return {
+          name: r.name, board: merged.board,
+          ore: merged.ore ?? base.ore, dif: merged.dif ?? base.dif, wov: merged.wov ?? base.wov,
+          dbu: merged.dbu ?? base.dbu, zt: merged.zt ?? base.zt, hs: merged.hs ?? base.hs,
+          dis: merged.dis ?? base.dis, total: merged.total ?? base.total,
+          _fallback: r._fallback || undefined, chg,
+        };
+      });
+      console.log(`[mama] 计算完成，板块数=${heatmapData.length}`);
+    }
   } catch (e) {
     console.log(`[mama] 计算失败(${e.message})，保留旧值`);
   }

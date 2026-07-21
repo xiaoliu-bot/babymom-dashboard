@@ -1,0 +1,10 @@
+{
+  "name": "babymom-dashboard",
+  "version": "3.0.0",
+  "private": true,
+  "description": "宝妈指数看板 · 大盘数据监控（GitHub Action / 本地脚本每日收盘刷新）",
+  "scripts": {
+    "fetch": "node scripts/fetch_data.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
