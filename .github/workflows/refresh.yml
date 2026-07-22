@@ -22,13 +22,15 @@ jobs:
           node-version: '22'
 
       - name: 拉取数据并生成 data.json
+        env:
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
         run: node scripts/fetch_data.js
 
-      - name: 提交 data.json
+      - name: 提交 data.json 与缓存
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data.json
+          git add data.json cache
           if git diff --cached --quiet; then
             echo "数据无变化，跳过提交"
           else

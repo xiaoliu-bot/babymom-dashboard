@@ -39,29 +39,6 @@
       { name: '创新药',      pe: 38.70,  pePct: 38.50, pbPct: 42.10, peChg: +1.2 },
       { name: '新能源电池',  pe: 28.90,  pePct: 35.60, pbPct: 48.20, peChg: -1.8 },
     ],
-    navHistory: [
-      { date: '2026-02-11', nav: 1.15 }, { date: '2026-02-28', nav: 1.25 },
-      { date: '2026-03-15', nav: 1.18 }, { date: '2026-03-31', nav: 1.12 },
-      { date: '2026-04-15', nav: 1.30 }, { date: '2026-04-30', nav: 1.45 },
-      { date: '2026-05-15', nav: 1.62 }, { date: '2026-05-31', nav: 1.88 },
-      { date: '2026-06-10', nav: 2.20 }, { date: '2026-06-20', nav: 2.80 },
-      { date: '2026-06-25', nav: 3.10 }, { date: '2026-06-30', nav: 3.3724 },
-      { date: '2026-07-01', nav: 3.29 }, { date: '2026-07-02', nav: 3.01 },
-      { date: '2026-07-03', nav: 2.98 }, { date: '2026-07-07', nav: 2.50 },
-      { date: '2026-07-08', nav: 2.20 }, { date: '2026-07-09', nav: 1.62 },
-      { date: '2026-07-10', nav: 1.51 }, { date: '2026-07-13', nav: 1.45 },
-      { date: '2026-07-14', nav: 1.48 }, { date: '2026-07-15', nav: 1.40 },
-      { date: '2026-07-16', nav: 1.32 }, { date: '2026-07-19', nav: 1.28 },
-    ],
-    sectorBreakdown: [
-      { label: 'AI芯片',        value: 17.43, color: '#f85149' },
-      { label: '半导体设备',    value: 19.90, color: '#d29922' },
-      { label: '晶圆制造',      value: 8.50,  color: '#a371f7' },
-      { label: '存储芯片',      value: 15.29, color: '#3fb950' },
-      { label: '图像传感器',    value: 4.20,  color: '#58a6ff' },
-      { label: '芯片IP/Chiplet',value: 3.55,  color: '#79c0ff' },
-      { label: '其他',          value: 31.13, color: '#484f58' },
-    ],
   };
 
   /* ============================================================
@@ -190,64 +167,6 @@
     });
   }
 
-  function renderNavChart(d) {
-    charts.nav = new Chart(document.getElementById('navChart'), {
-      type: 'line',
-      data: {
-        labels: (d || []).map((x) => x.date),
-        datasets: [{
-          label: '159995 收盘价',
-          data: (d || []).map((x) => x.nav),
-          borderColor: COLORS.blue,
-          backgroundColor: 'rgba(31,111,235,0.08)',
-          borderWidth: 2, fill: true, tension: 0.4, pointRadius: 3,
-          pointBackgroundColor: (d || []).map((x) => (x.nav >= 3.0 ? COLORS.red : x.nav >= 2.0 ? COLORS.yel : COLORS.blue)),
-          pointBorderColor: 'transparent',
-        }],
-      },
-      options: {
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: (ctx) => `收盘价: ${ctx.parsed.y.toFixed(4)}` } },
-        },
-        scales: {
-          x: { grid: { color: '#21262d' }, ticks: { maxTicksLimit: 10, font: { size: 10 } } },
-          y: { grid: { color: '#21262d' }, ticks: { font: { size: 10 } } },
-        },
-      },
-    });
-  }
-
-  function renderPieChart(d) {
-    charts.pie = new Chart(document.getElementById('pieChart'), {
-      type: 'doughnut',
-      data: {
-        labels: (d || []).map((x) => x.label),
-        datasets: [{ data: (d || []).map((x) => x.value), backgroundColor: (d || []).map((x) => x.color), borderWidth: 2, borderColor: '#0d1117' }],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              font: { size: 11 }, padding: 10, color: '#e6edf3',
-              generateLabels: (chart) => {
-                const data = chart.data;
-                return data.labels.map((label, i) => ({
-                  text: `${label}  ${Number(data.datasets[0].data[i]).toFixed(1)}%`,
-                  fillStyle: data.datasets[0].backgroundColor[i], hidden: false, index: i,
-                }));
-              },
-            },
-          },
-          tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${Number(ctx.parsed).toFixed(2)}%` } },
-        },
-        cutout: '50%',
-      },
-    });
-  }
-
   function setStatus(text, isError) {
     const el = document.getElementById('update-time');
     if (el) el.innerHTML = text;
@@ -261,8 +180,6 @@
     renderHeatmap(data.heatmapData);
     renderValuationTable(data.valuationData);
     renderBarChart(data.heatmapData);
-    renderNavChart(data.navHistory);
-    renderPieChart(data.sectorBreakdown);
   }
 
   /* ============================================================

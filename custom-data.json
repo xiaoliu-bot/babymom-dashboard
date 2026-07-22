@@ -22,14 +22,5 @@
     { "name": "恒生科技", "pe": 32.50, "pePct": 45.20, "pbPct": 55.80, "peChg": -3.4 },
     { "name": "创新药", "pe": 38.70, "pePct": 38.50, "pbPct": 42.10, "peChg": 1.2 },
     { "name": "新能源电池", "pe": 28.90, "pePct": 35.60, "pbPct": 48.20, "peChg": -1.8 }
-  ],
-  "sectorBreakdown": [
-    { "label": "AI芯片", "value": 17.43, "color": "#f85149" },
-    { "label": "半导体设备", "value": 19.90, "color": "#d29922" },
-    { "label": "晶圆制造", "value": 8.50, "color": "#a371f7" },
-    { "label": "存储芯片", "value": 15.29, "color": "#3fb950" },
-    { "label": "图像传感器", "value": 4.20, "color": "#58a6ff" },
-    { "label": "芯片IP/Chiplet", "value": 3.55, "color": "#79c0ff" },
-    { "label": "其他", "value": 31.13, "color": "#484f58" }
   ]
 }
