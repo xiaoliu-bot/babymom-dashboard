@@ -64,6 +64,22 @@ const ARCHIVE_DIR = path.join(ROOT, 'archive');
 const MANIFEST_PATH = path.join(ARCHIVE_DIR, 'manifest.json');
 const RETAIN_FILES = Number(process.env.RETAIN_FILES) || 800; // 归档保留上限，超出删最旧（≈3年双频次）
 
+// ── 新浪财经（实时行情，GitHub 可直连；需请求头伪装 + 严格限速防封）──
+// 参考：单 IP ≈30~60 次/分，突发易 403/封 IP；必须带 UA + Referer(finance.sina.com.cn)；返回 GBK。
+const SINA_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Referer': 'https://finance.sina.com.cn/',
+};
+const SINA_MIN_GAP = 1500;            // 两次请求最小间隔(ms)，留余量（红线 30~60次/分）
+const SINA_JITTER = 500;              // 随机抖动上限(ms)，打散节奏
+const SINA_CHUNK = 80;                // 单次批量代码数（list= 多代码上限）
+const SINA_RT_TTL = 20 * 60 * 1000;   // 实时快照本地缓存 20 分钟（同类数据不重复拉）
+const SINA_BAN_COOLDOWN = 10 * 60 * 1000; // 触发限流后暂停 10 分钟
+const SINA_RT_CACHE = path.join(CACHE_DIR, 'sina_realtime.json');
+const SINA_IDX = { sse: 'sh000001' }; // 上证指数（其他指数沿用东财/Tushare 兜底）
+let _sinaLastCall = 0;
+let _sinaBannedUntil = 0;
+
 // ── 工具 ──
 function ymd(d) { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`; }
 function fmt2(n) { return Math.round(n * 100) / 100; }
@@ -152,7 +168,7 @@ function aggregate(rows, sbMap) {
     if (pct > 0) s.up += 1; else if (pct < 0) s.down += 1;
     if (isLimitUp(pct, r.ts_code, sb.name)) s.zt += 1;
     const fl = Number(sb.float_share) || 0;
-    if (fl > 0) { s.tNum += (Number(r.vol) || 0) * 100; s.tDen += fl * 10000; } // 股
+    if (fl > 0) { s.tNum += (Number(r.vol) || 0) * 100; s.tDen += fl; } // Tushare vol=手→×100=股；float_share=股（勿×10000）
     s.codes.push(r.ts_code);
   }
   for (const k in sec) sec[k].ret = (sec[k].total ? sec[k].ret / sec[k].total : 0) / 100; // 板块等权日收益(小数)
@@ -344,28 +360,187 @@ function buildIndexItem(meta, bars) {
   return { name: meta.name, code: meta.code, price: fmt2(price), change, pct, date: last.date };
 }
 
+// ── 新浪财经客户端（防封：全局限速 + 请求头伪装 + GBK + 指数退避 + 封禁冷却）──
+function sinaThrottle() {
+  const now = Date.now();
+  const wait = Math.max(0, _sinaLastCall + SINA_MIN_GAP + Math.random() * SINA_JITTER - now);
+  return sleep(wait);
+}
+async function sinaFetchText(url, tries = 4) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    if (Date.now() < _sinaBannedUntil) throw new Error('新浪处于封禁冷却期');
+    await sinaThrottle();
+    _sinaLastCall = Date.now();
+    try {
+      const res = await fetch(url, { headers: SINA_HEADERS });
+      if (res.status === 403 || res.status === 429) {
+        _sinaBannedUntil = Date.now() + SINA_BAN_COOLDOWN;
+        lastErr = new Error('新浪限流 HTTP ' + res.status);
+        await sleep(2000 * (i + 1));
+        continue;
+      }
+      if (!res.ok) { lastErr = new Error('HTTP ' + res.status); await sleep(1500 * (i + 1)); continue; }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const txt = new TextDecoder('gbk').decode(buf); // 新浪返回 GBK
+      if (!txt.includes('hq_str')) { lastErr = new Error('返回空/无数据'); await sleep(1500 * (i + 1)); continue; }
+      return txt;
+    } catch (e) { lastErr = e; await sleep(1500 * (i + 1)); }
+  }
+  throw lastErr;
+}
+function parseSinaRealtime(txt) {
+  const map = {};
+  txt.split(';\n').forEach((line) => {
+    const m = line.match(/var hq_str_(\w+)="(.*)"/);
+    if (!m) return;
+    const f = m[2].split(',');
+    if (f.length < 10) return;
+    const cur = Number(f[3]), pre = Number(f[2]);
+    if (!isFinite(cur) || !isFinite(pre) || pre <= 0) return;
+    map[m[1]] = { name: f[0], open: Number(f[1]), preClose: pre, current: cur, high: Number(f[4]), low: Number(f[5]), volume: Number(f[8]) || 0, amount: Number(f[9]) || 0 };
+  });
+  return map;
+}
+async function fetchSinaRealtime(codes) {
+  const out = {};
+  for (let i = 0; i < codes.length; i += SINA_CHUNK) {
+    const batch = codes.slice(i, i + SINA_CHUNK);
+    try {
+      const txt = await sinaFetchText('https://hq.sinajs.cn/list=' + batch.join(','));
+      Object.assign(out, parseSinaRealtime(txt));
+    } catch (e) {
+      console.log(`[sina] 批量失败(${e.message})，该批 ${batch.length} 只跳过`);
+    }
+  }
+  return out;
+}
+// 新浪实时 → 与 aggregate() 同构的板块聚合
+// 注意单位对齐（否则 宝妈指数 维度会失真）：
+//   ret   = 当日收益率(%)（与 Tushare pct_chg 同义）
+//   amt   = 成交额，新浪单位为「元」→ ÷1000 转「千元」，对齐 Tushare daily.amount
+//   volume= 成交量，新浪单位为「股」（已验证 price×vol≈amount），无需像 Tushare(手) 那样 ×100
+function buildRealtimeSec(map, sbMap) {
+  const sec = {};
+  for (const code in map) {
+    const rt = map[code];
+    const sb = sbMap[code];
+    if (!sb || !sb.industry) continue;
+    const ind = sb.industry;
+    if (!sec[ind]) sec[ind] = { ret: 0, amt: 0, up: 0, down: 0, total: 0, zt: 0, tNum: 0, tDen: 0, codes: [] };
+    const s = sec[ind];
+    const pct = (rt.current - rt.preClose) / rt.preClose * 100;
+    s.ret += pct;
+    s.amt += rt.amount / 1000; // 元 → 千元
+    s.total += 1;
+    if (pct > 0) s.up += 1; else if (pct < 0) s.down += 1;
+    if (isLimitUp(pct, code, rt.name)) s.zt += 1;
+    const fl = Number(sb.float_share) || 0;
+    if (fl > 0) { s.tNum += rt.volume; s.tDen += fl; } // 新浪 volume 已是股；float_share=股（勿×10000）
+    s.codes.push(sb.ts_code || code);
+  }
+  for (const k in sec) sec[k].ret = (sec[k].total ? sec[k].ret / sec[k].total : 0) / 100;
+  return sec;
+}
+async function fetchSinaIndices() {
+  const syms = Object.values(SINA_IDX);
+  try {
+    const txt = await sinaFetchText('https://hq.sinajs.cn/list=' + syms.join(','));
+    const map = parseSinaRealtime(txt);
+    const out = {};
+    for (const [key, sym] of Object.entries(SINA_IDX)) {
+      const r = map[sym];
+      if (!r) continue;
+      const change = fmt2(r.current - r.preClose);
+      out[key] = { name: r.name, code: sym, price: fmt2(r.current), change, pct: fmt2((r.current - r.preClose) / r.preClose * 100), date: '' };
+    }
+    return out;
+  } catch (e) { console.log('[sina idx] 失败', e.message); return {}; }
+}
+function loadSinaRtCache() {
+  const c = readJsonSafe(SINA_RT_CACHE);
+  if (c && c.savedAt && (Date.now() - new Date(c.savedAt).getTime()) < SINA_RT_TTL && c.map) return c.map;
+  return null;
+}
+function saveSinaRtCache(map) { writeJsonSafe(SINA_RT_CACHE, { savedAt: new Date().toISOString(), map }); }
+
+// ts_code(如 600000.SH) → 新浪符号(如 sh600000)
+function tsCodeToSina(ts) {
+  const [sym, ex] = ts.split('.');
+  const pfx = { SH: 'sh', SZ: 'sz', BJ: 'bj' }[ex] || (ex || '').toLowerCase();
+  return pfx + sym;
+}
+
+// 新浪实时 → 板块聚合（带 20 分钟本地缓存，命中则不重复拉取，避免触发限流）
+async function getSinaTodaySec(sbMap) {
+  const sinaSbMap = {};
+  const symbols = [];
+  for (const ts in sbMap) {
+    const sb = sbMap[ts];
+    if (!sb.industry) continue;
+    const sym = tsCodeToSina(ts);
+    sinaSbMap[sym] = { ...sb, ts_code: ts };
+    symbols.push(sym);
+  }
+  const cached = loadSinaRtCache();
+  if (cached && Object.keys(cached).length) {
+    const sec = buildRealtimeSec(cached, sinaSbMap);
+    console.log(`[sina] 命中 ${(SINA_RT_TTL / 60000)} 分钟缓存，${Object.keys(sec).length} 个行业`);
+    return sec;
+  }
+  try {
+    const map = await fetchSinaRealtime(symbols);
+    if (map && Object.keys(map).length) {
+      saveSinaRtCache(map);
+      const sec = buildRealtimeSec(map, sinaSbMap);
+      console.log(`[sina] 实时拉取 ${Object.keys(map).length} 只，${Object.keys(sec).length} 个行业`);
+      return sec;
+    }
+    console.log('[sina] 实时返回为空（可能盘中未开或限流）');
+  } catch (e) { console.log(`[sina] 实时拉取失败(${e.message})`); }
+  return null;
+}
+
 async function main() {
   const dataPath = path.join(ROOT, 'data.json');
   const customPath = path.join(ROOT, 'custom-data.json');
   const prev = readJsonSafe(dataPath) || {};
   const customFile = readJsonSafe(customPath) || {};
   const today = new Date();
+  const bj = new Date(today.getTime() + 8 * 3600000);
+  const p = (n) => String(n).padStart(2, '0');
   const TODAY_YMD = ymd(today);
   const begDate = new Date(today.getTime() - 200 * 86400000);
   const beg = ymd(begDate);
 
-  // 主力：Tushare
+  // 会话判定：午盘收盘(<12点北京时间) / 全日收盘(>=12点)；env SESSION 可强制覆盖
+  const SESSION = process.env.SESSION || (bj.getUTCHours() < 12 ? 'midday' : 'close');
+  const SESSION_LABEL = SESSION === 'midday' ? '午盘收盘' : '全日收盘';
+
+  // 主力：Tushare 列表/历史（缓存 7 天 + 限流退避保护）
   const sbMap = await getStockBasic();
   const hist = await ensureHistory(sbMap);
 
+  // ── 今日板块聚合 ──
+  //   午盘：Tushare daily 尚未发布 → 优先新浪实时（盘中快照）
+  //   收盘：优先 Tushare daily（收盘权威值）；若未发布/限流 → 新浪实时回补（=当日收盘真实价）
   let todaySec = null;
-  try {
-    const rows = await fetchDaily(TODAY_YMD);
-    if (rows && rows.length) {
-      todaySec = aggregate(rows, sbMap);
-      console.log(`[today] ${TODAY_YMD} ${rows.length} 行, ${Object.keys(todaySec).length} 个行业`);
-    } else console.log(`[today] ${TODAY_YMD} 无交易数据（非交易日？保留旧值）`);
-  } catch (e) { console.log(`[today] 拉取失败(${e.message})，保留旧值`); }
+  let realtimeSrc = false;
+  if (SESSION === 'midday') {
+    const sinaSec = await getSinaTodaySec(sbMap);
+    if (sinaSec && Object.keys(sinaSec).length) { todaySec = sinaSec; realtimeSrc = true; console.log('[today] 午盘数据源=新浪实时（盘中）'); }
+    else console.log('[today] 午盘新浪实时无数据，保留旧值');
+  } else {
+    try {
+      const rows = await fetchDaily(TODAY_YMD);
+      if (rows && rows.length) { todaySec = aggregate(rows, sbMap); console.log(`[today] ${TODAY_YMD} ${rows.length} 行, ${Object.keys(todaySec).length} 个行业`); }
+      else console.log(`[today] ${TODAY_YMD} Tushare 无数据（未发布/非交易日？尝试新浪回补）`);
+    } catch (e) { console.log(`[today] Tushare daily 失败(${e.message})，尝试新浪回补`); }
+    if (!todaySec) {
+      const sinaSec = await getSinaTodaySec(sbMap);
+      if (sinaSec && Object.keys(sinaSec).length) { todaySec = sinaSec; realtimeSrc = true; console.log('[today] 收盘回补数据源=新浪实时'); }
+    }
+  }
 
   let heatmapData = prev.heatmapData || [];
   if (todaySec && Object.keys(todaySec).length) {
@@ -385,34 +560,43 @@ async function main() {
     } else console.log('[mama] 空结果，保留旧值');
   } else console.log('[mama] 今日无数据，保留旧 heatmapData');
 
-  // 上证（Tushare）
+  // 上证：优先新浪实时（GitHub 可直连、盘中可得），Tushare 兜底
   const indexData = prev.indexData || {};
   try {
-    const bars = await fetchIndexSSE(beg, TODAY_YMD);
-    const it = buildIndexItem({ name: '上证指数', code: '000001' }, bars);
-    if (it) { indexData.sse = it; console.log(`[sse] ${it.price} (${it.pct}%)`); }
-  } catch (e) { console.log(`[sse] 失败(${e.message})，保留旧值`); }
+    const sinaIdx = await fetchSinaIndices();
+    if (sinaIdx.sse) { indexData.sse = sinaIdx.sse; console.log(`[sse] 新浪实时 ${indexData.sse.price} (${indexData.sse.pct}%)`); }
+    else throw new Error('新浪未返回上证');
+  } catch (e) {
+    console.log(`[sse] 新浪失败(${e.message})，回退 Tushare`);
+    try {
+      const bars = await fetchIndexSSE(beg, TODAY_YMD);
+      const it = buildIndexItem({ name: '上证指数', code: '000001' }, bars);
+      if (it) { indexData.sse = it; console.log(`[sse] Tushare ${it.price} (${it.pct}%)`); }
+    } catch (e2) { console.log(`[sse] Tushare 也失败(${e2.message})，保留旧值`); }
+  }
 
   // 东财备份：纳指100 / 恒生科技（大陆 IP 才成功，GitHub 自动保留旧值）
+  let emUsed = false;
   for (const [key, meta] of Object.entries(EM_INDEX)) {
     try {
       const bars = await fetchKlinesEM(meta.secid, beg, TODAY_YMD);
       const it = buildIndexItem(meta, bars);
-      if (it) { indexData[key] = it; console.log(`[em ${key}] ${it.price} (${it.pct}%)`); }
+      if (it) { indexData[key] = it; emUsed = true; console.log(`[em ${key}] ${it.price} (${it.pct}%)`); }
     } catch (e) { console.log(`[em ${key}] 失败(${e.message})，保留旧值`); }
     await sleep(500);
   }
   const valuationData = customFile.valuationData || prev.valuationData || BASELINE_CUSTOM.valuationData;
 
-  const bj = new Date(today.getTime() + 8 * 3600000);
-  const p = (n) => String(n).padStart(2, '0');
   const updatedAt = `${bj.getUTCFullYear()}-${p(bj.getUTCMonth() + 1)}-${p(bj.getUTCDate())} ${p(bj.getUTCHours())}:${p(bj.getUTCMinutes())}:${p(bj.getUTCSeconds())}`;
 
-  const out = { updatedAt, source: 'tushare-free + eastmoney-backup', indexData, heatmapData, valuationData };
+  // 数据源标记（非大陆 IP 时东财/股吧多为旧值，仅标注实际生效来源）
+  const srcParts = ['tushare-free'];
+  if (realtimeSrc) srcParts.push('sina-realtime');
+  if (emUsed) srcParts.push('eastmoney-backup');
+  const source = srcParts.join(' + ');
 
-  // 会话判定：午盘收盘(<12点) / 全日收盘(>=12点)；可由 env SESSION 强制覆盖
-  const SESSION = process.env.SESSION || (bj.getUTCHours() < 12 ? 'midday' : 'close');
-  const SESSION_LABEL = SESSION === 'midday' ? '午盘收盘' : '全日收盘';
+  const out = { updatedAt, session: SESSION, sessionLabel: SESSION_LABEL, realtime: realtimeSrc, source, indexData, heatmapData, valuationData };
+
   const incomplete = !(todaySec && Object.keys(todaySec).length);
   const dow = today.getDay();
   const isWeekend = dow === 0 || dow === 6;
@@ -427,6 +611,6 @@ async function main() {
   }
 }
 
-module.exports = { aggregate, computeMama, isLimitUp, limitPct, pctRank, std, avg, W, WSUM, writeArchive };
+module.exports = { aggregate, computeMama, isLimitUp, limitPct, pctRank, std, avg, W, WSUM, writeArchive, getSinaTodaySec, tsCodeToSina, buildRealtimeSec, parseSinaRealtime };
 
 if (require.main === module) main().catch((e) => { console.error('FATAL:', e); process.exit(1); });
