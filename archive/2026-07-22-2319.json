@@ -1597,5 +1597,13 @@
       "pbPct": 48.2,
       "peChg": -1.8
     }
-  ]
+  ],
+  "meta": {
+    "session": "close",
+    "sessionLabel": "全日收盘",
+    "date": "2026-07-22",
+    "file": "archive/2026-07-22-2319.json",
+    "updatedAt": "2026-07-22 23:19:25",
+    "incomplete": false
+  }
 }

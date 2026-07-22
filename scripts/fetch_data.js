@@ -183,23 +183,31 @@ async function getStockBasic() {
     return cache.map;
   }
   console.log('[sb] 拉取 stock_basic …');
-  const data = await tushare('stock_basic',
-    { exchange: '', list_status: 'L' },
-    'ts_code,symbol,name,industry,market,exchange,list_status,float_share,total_share');
-  const fi = {}; data.fields.forEach((f, i) => (fi[f] = i));
-  const map = {};
-  data.items.forEach((it) => {
-    map[it[fi.ts_code]] = {
-      name: it[fi.name],
-      industry: it[fi.industry] || '',
-      float_share: it[fi.float_share] || 0,
-      exchange: it[fi.exchange] || '',
-      list_status: it[fi.list_status] || '',
-    };
-  });
-  writeJsonSafe(STOCK_BASIC_CACHE, { fetchedAt: new Date().toISOString(), map });
-  console.log(`[sb] ${Object.keys(map).length} 只`);
-  return map;
+  try {
+    const data = await tushare('stock_basic',
+      { exchange: '', list_status: 'L' },
+      'ts_code,symbol,name,industry,market,exchange,list_status,float_share,total_share');
+    const fi = {}; data.fields.forEach((f, i) => (fi[f] = i));
+    const map = {};
+    data.items.forEach((it) => {
+      map[it[fi.ts_code]] = {
+        name: it[fi.name],
+        industry: it[fi.industry] || '',
+        float_share: it[fi.float_share] || 0,
+        exchange: it[fi.exchange] || '',
+        list_status: it[fi.list_status] || '',
+      };
+    });
+    writeJsonSafe(STOCK_BASIC_CACHE, { fetchedAt: new Date().toISOString(), map });
+    console.log(`[sb] ${Object.keys(map).length} 只`);
+    return map;
+  } catch (e) {
+    if (cache && cache.map && Object.keys(cache.map).length) {
+      console.log(`[sb] Tushare 拉取失败(${e.message})，回退到已缓存的 ${Object.keys(cache.map).length} 只`);
+      return cache.map;
+    }
+    throw e;
+  }
 }
 
 // ── 2. 当日全市场日线（批量，1 次调用）──
