@@ -37,6 +37,13 @@
   }
 
   .header-right { display: flex; align-items: center; gap: 12px; }
+  .hist-label { font-size: 13px; color: #8b949e; }
+  #history-select {
+    background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; max-width: 220px;
+  }
+  #history-select:hover { border-color: #8b949e; }
+  #history-select:focus { outline: none; border-color: #1f6feb; }
   #status-dot {
     width: 9px; height: 9px; border-radius: 50%;
     background: #238636; display: inline-block;
@@ -135,6 +142,10 @@
   </div>
   <div class="header-right">
     <span id="status-dot" title="数据状态"></span>
+    <span class="hist-label">回溯</span>
+    <select id="history-select" title="回溯历史快照">
+      <option value="latest">最新（实时）</option>
+    </select>
     <button id="refresh-btn" title="手动刷新数据"><span class="ico">⟳</span> 刷新</button>
   </div>
 </div>
@@ -164,7 +175,7 @@
 <!-- 热力图 + 估值表 -->
 <div class="grid">
   <div class="card">
-    <div class="card-title">🔥 拥挤度地图（11板块 × 6维度）</div>
+    <div class="card-title">🔥 板块宝妈指数热力图（按总分排序）</div>
     <div class="heatmap-grid" id="heatmap-container"></div>
     <div class="legend">
       <span><span class="legend-dot" style="background:#da3633"></span> &gt;100 情绪极端</span>

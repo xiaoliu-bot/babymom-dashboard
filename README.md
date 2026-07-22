@@ -1,6 +1,6 @@
 # 宝妈指数看板 · 大盘数据监控（在线版）
 
-基于原 `babymom-dashboard.html` 改造的可上线版本。每日收盘后自动计算「宝妈指数」（情绪化散户活跃度），推送到 GitHub Pages 展示。
+基于原 `babymom-dashboard.html` 改造的可上线版本。每日**午盘收盘（11:35）+ 全日收盘（15:30）**两次自动计算「宝妈指数」（情绪化散户活跃度），推送到 GitHub Pages 展示；每次运行都会**留存快照**并支持**历史回溯**。
 
 ## 数据源策略（Tushare 免费档为主 + 东财备份）
 
@@ -16,7 +16,9 @@
 - 任何一部分失败都**保留上一次真实数据**，绝不用静态基线覆盖。
 
 ### 在 GitHub Actions 自动跑（推荐，无需大陆 IP）
-仓库已配 `.github/workflows/refresh.yml`：每天北京时间 15:30（收盘后）触发，跑 `node scripts/fetch_data.js` 生成 `data.json` 并提交。`TUSHARE_TOKEN` 已内置兜底（可直接跑）；如仓库为公开仓，建议到 Settings → Secrets 添加 `TUSHARE_TOKEN` 并将脚本里的兜底常量移除/轮换，避免 token 泄露。
+仓库已配 `.github/workflows/refresh.yml`：每个工作日北京时间 **11:35（午盘收盘）** 与 **15:30（全日收盘，确保 `daily` 已发布）** 各触发一次，跑 `node scripts/fetch_data.js` 生成 `data.json` 并**留存一份快照到 `archive/`**，一并提交。`TUSHARE_TOKEN` 已内置兜底（可直接跑）；如仓库为公开仓，建议到 Settings → Secrets 添加 `TUSHARE_TOKEN` 并将脚本里的兜底常量移除/轮换，避免 token 泄露。
+
+> 防限频说明：`stock_basic` 仅缓存失效（>7 天）时调用 1 次；两次运行间隔 >4 小时，`index_daily` 的「1次/小时」限额轻松满足；`daily` 批量本身不限频。因此每日双频次不会触发 Tushare 限流。
 
 ### 在你自己的电脑上跑（可选，能拿到东财增强）
 大陆网络下东财畅通，可额外刷新纳指/恒生/ETF + 股吧讨论度：
@@ -49,17 +51,25 @@
 
 ## 目录结构
 ```
-index.html            页面（深色专业风），顶部「刷新」按钮 + 状态灯
+index.html            页面（深色专业风），顶部「刷新」+「回溯」下拉 + 状态灯
 config.js             页面配置（数据文件路径、刷新策略）
-app.js                读 data.json → 渲染 + 刷新控制（无 data.json 时回退演示数据）
+app.js                读 data.json → 渲染 + 刷新控制 + 历史回溯（无 data.json 时回退演示数据）
 custom-data.json      ★ 估值/持仓 自定义数据（免费源算不了，手动维护或接你自己的接口）
-scripts/fetch_data.js 取数+计算脚本：Tushare 免费档(主力) + 东财(备份) → 宝妈指数 → data.json
+scripts/fetch_data.js 取数+计算脚本：Tushare 免费档(主力) + 东财(备份) → 宝妈指数 → data.json + 归档
 cache/                本地缓存（已提交）：stock_basic.json(行业篮子) + sector_history.json(波动/回补回看)
+archive/              每日快照归档（已提交）：每个运行一份 <日期>-<时刻>.json + manifest.json 索引
 fetch-data.bat / .sh  本地一键刷新（大陆网络，可拿东财增强）
 test_engine.js        计算引擎合成测试（node test_engine.js，无需联网）
-.github/workflows/refresh.yml  定时/手动刷新（ubuntu-latest，GitHub 直连 Tushare）
+.github/workflows/refresh.yml  每日双频次定时/手动刷新（ubuntu-latest，GitHub 直连 Tushare）
 .nojekyll             GitHub Pages 跳过 Jekyll
 ```
+
+## 历史回溯
+每次运行都会在 `archive/` 留存一份完整快照（含 `meta.session`：午盘收盘 / 全日收盘），`archive/manifest.json` 维护按时间倒序的索引。页面顶部「回溯」下拉框会列出所有历史快照（如 `2026-07-22 全日收盘`），选择后热力图 / 估值表 / 排名图立即切换到该时点数据；选「最新（实时）」或点「刷新」回到当前 `data.json`。
+
+- 归档保留上限 `RETAIN_FILES`（默认 800 份 ≈ 3 年双频次），超出自动删除最旧快照。
+- 周末且无新数据时跳过归档，避免空快照刷屏。
+- 午盘快照：因 Tushare 免费档 `daily` 仅在收盘后发布，午盘时点若当日数据尚未生成，快照会沿用上一收盘的计算结果（标记为 `incomplete`），仅作时点留痕。
 
 ## 本地预览
 ```bash

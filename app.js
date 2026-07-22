@@ -59,6 +59,51 @@
   }
 
   /* ============================================================
+   * B2. 回溯：读归档清单，渲染历史快照
+   * ============================================================ */
+  async function loadManifest() {
+    try {
+      const res = await fetch('archive/manifest.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return [];
+      const m = await res.json();
+      return Array.isArray(m) ? m : [];
+    } catch (e) { return []; }
+  }
+
+  async function viewArchive(entry) {
+    try {
+      const res = await fetch(entry.file + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      renderAll(data);
+      const lbl = `${entry.date} ${entry.sessionLabel}` + (entry.incomplete ? '（非交易日 / 暂无新数据）' : '');
+      setStatus('正在查看回溯快照：' + lbl, false);
+    } catch (e) {
+      setStatus('回溯快照加载失败：' + e.message, true);
+    }
+  }
+
+  function setupHistory() {
+    const sel = document.getElementById('history-select');
+    if (!sel) return;
+    sel.addEventListener('change', async () => {
+      const v = sel.value;
+      if (v === 'latest') { await doRefresh(); return; }
+      const entry = (sel._entries || []).find((e) => e.file === v);
+      if (entry) await viewArchive(entry);
+    });
+    loadManifest().then((list) => {
+      sel._entries = list;
+      list.forEach((e) => {
+        const opt = document.createElement('option');
+        opt.value = e.file;
+        opt.textContent = `${e.date} ${e.sessionLabel}` + (e.incomplete ? ' · 无数据' : '');
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  /* ============================================================
    * D. 配色
    * ============================================================ */
   const COLORS = { red: '#da3633', yel: '#d29922', green: '#238636', blue: '#1f6feb', purple: '#a371f7' };
@@ -191,6 +236,8 @@
   async function doRefresh() {
     if (refreshing) return;
     refreshing = true;
+    const sel = document.getElementById('history-select');
+    if (sel) sel.value = 'latest'; // 刷新即回到最新
     const btn = document.getElementById('refresh-btn');
     if (btn) { btn.disabled = true; btn.classList.add('spinning'); }
     setStatus('正在拉取数据…', false);
@@ -232,6 +279,7 @@
       const btn = document.getElementById('refresh-btn');
       if (btn) btn.addEventListener('click', doRefresh);
     }
+    setupHistory(); // 装载回溯下拉
     doRefresh(); // 首次加载
     // 每分钟检查一次是否需要"收盘后自动刷新"
     setInterval(checkAutoAfterClose, 60 * 1000);

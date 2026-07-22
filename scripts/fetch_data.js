@@ -60,6 +60,9 @@ const ROOT = path.resolve(__dirname, '..');
 const CACHE_DIR = path.join(ROOT, 'cache');
 const STOCK_BASIC_CACHE = path.join(CACHE_DIR, 'stock_basic.json');
 const HISTORY_CACHE = path.join(CACHE_DIR, 'sector_history.json');
+const ARCHIVE_DIR = path.join(ROOT, 'archive');
+const MANIFEST_PATH = path.join(ARCHIVE_DIR, 'manifest.json');
+const RETAIN_FILES = Number(process.env.RETAIN_FILES) || 800; // 归档保留上限，超出删最旧（≈3年双频次）
 
 // ── 工具 ──
 function ymd(d) { const p = (n) => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`; }
@@ -74,6 +77,31 @@ function pctRank(value, arr) {
 }
 function readJsonSafe(p) { try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return null; } }
 function writeJsonSafe(p, o) { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, JSON.stringify(o), 'utf8'); }
+
+// ── 归档：每次运行留存一份快照，供前端回溯 ──
+function writeArchive(out, session, sessionLabel, updatedAt, incomplete) {
+  const bj = new Date(Date.now() + 8 * 3600000);
+  const p = (n) => String(n).padStart(2, '0');
+  const datePart = `${bj.getUTCFullYear()}-${p(bj.getUTCMonth() + 1)}-${p(bj.getUTCDate())}`;
+  const fileBase = `${datePart}-${p(bj.getUTCHours())}${p(bj.getUTCMinutes())}`;
+  const relFile = `archive/${fileBase}.json`;
+  fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+  const archObj = { ...out, meta: { session, sessionLabel, date: datePart, file: relFile, updatedAt, incomplete } };
+  fs.writeFileSync(path.join(ARCHIVE_DIR, fileBase + '.json'), JSON.stringify(archObj, null, 2), 'utf8');
+
+  let manifest = readJsonSafe(MANIFEST_PATH) || [];
+  if (!Array.isArray(manifest)) manifest = [];
+  manifest.push({ file: relFile, date: datePart, session, sessionLabel, updatedAt, source: out.source, sectors: (out.heatmapData || []).length, incomplete });
+  manifest.sort((a, b) => b.file.localeCompare(a.file)); // 新 → 旧
+  if (manifest.length > RETAIN_FILES) {
+    const remove = manifest.splice(RETAIN_FILES);
+    remove.forEach((m) => { try { fs.unlinkSync(path.join(ROOT, m.file)); } catch (e) {} });
+    console.log(`[archive] 超出保留上限 ${RETAIN_FILES}，清理 ${remove.length} 个最旧快照`);
+  }
+  writeJsonSafe(MANIFEST_PATH, manifest);
+  console.log(`[archive] 已留存快照 ${relFile}（session=${session}, incomplete=${incomplete}）`);
+  return path.join(ARCHIVE_DIR, fileBase + '.json');
+}
 
 // ── Tushare 调用（带重试/限流退避）──
 async function tushare(api_name, params, fields, tries = 4) {
@@ -381,10 +409,24 @@ async function main() {
   const updatedAt = `${bj.getUTCFullYear()}-${p(bj.getUTCMonth() + 1)}-${p(bj.getUTCDate())} ${p(bj.getUTCHours())}:${p(bj.getUTCMinutes())}:${p(bj.getUTCSeconds())}`;
 
   const out = { updatedAt, source: 'tushare-free + eastmoney-backup', indexData, heatmapData, valuationData };
+
+  // 会话判定：午盘收盘(<12点) / 全日收盘(>=12点)；可由 env SESSION 强制覆盖
+  const SESSION = process.env.SESSION || (bj.getUTCHours() < 12 ? 'midday' : 'close');
+  const SESSION_LABEL = SESSION === 'midday' ? '午盘收盘' : '全日收盘';
+  const incomplete = !(todaySec && Object.keys(todaySec).length);
+  const dow = today.getDay();
+  const isWeekend = dow === 0 || dow === 6;
+
   fs.writeFileSync(dataPath, JSON.stringify(out, null, 2), 'utf8');
   console.log(`\n[done] data.json 已生成，updatedAt=${updatedAt}`);
+  // 归档：周末且无数据则跳过（避免空快照刷屏），其余每次都留存
+  if (incomplete && isWeekend) {
+    console.log('[archive] 非交易日且无数据，跳过归档');
+  } else {
+    writeArchive(out, SESSION, SESSION_LABEL, updatedAt, incomplete);
+  }
 }
 
-module.exports = { aggregate, computeMama, isLimitUp, limitPct, pctRank, std, avg, W, WSUM };
+module.exports = { aggregate, computeMama, isLimitUp, limitPct, pctRank, std, avg, W, WSUM, writeArchive };
 
 if (require.main === module) main().catch((e) => { console.error('FATAL:', e); process.exit(1); });
