@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-23 11:54:44",
+  "updatedAt": "2026-07-23 11:48:39",
   "session": "midday",
   "sessionLabel": "午盘收盘",
   "realtime": true,
@@ -24,9 +24,9 @@
     "hstech": {
       "name": "恒生科技",
       "code": "HSTECH",
-      "price": 4703.88,
-      "change": 35.65,
-      "pct": 0.76,
+      "price": 4708.16,
+      "change": 39.93,
+      "pct": 0.86,
       "date": "2026-07-23"
     }
   },
@@ -81,7 +81,7 @@
       "hs": 0,
       "dis": 9,
       "total": 54,
-      "chg": 0
+      "chg": -25
     },
     {
       "name": "半导体",
@@ -94,7 +94,7 @@
       "hs": 64,
       "dis": 64,
       "total": 52,
-      "chg": 0
+      "chg": -36
     },
     {
       "name": "存储芯片",
@@ -159,7 +159,7 @@
       "hs": 36,
       "dis": 36,
       "total": 41,
-      "chg": 0
+      "chg": -20
     },
     {
       "name": "细分化工",
@@ -238,5 +238,13 @@
       "pbPct": 48.2,
       "peChg": -1.8
     }
-  ]
+  ],
+  "meta": {
+    "session": "midday",
+    "sessionLabel": "午盘收盘",
+    "date": "2026-07-23",
+    "file": "archive/2026-07-23-1152.json",
+    "updatedAt": "2026-07-23 11:48:39",
+    "incomplete": false
+  }
 }

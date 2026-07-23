@@ -30,7 +30,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── 可调参数 ──
 const HISTORY_DAYS = Number(process.env.HISTORY_DAYS) || 45; // 波动/回补回看窗口
-const MIN_STOCKS = 8; // 板块最少成分股，过滤噪音行业
+const MIN_STOCKS = 5; // 板块最少成分股（白名单篮子均≥10，留余量防轻量日跌破）
 const CALL_GAP = Number(process.env.CALL_GAP) || 1200; // Tushare 调用间隔(ms)，礼貌限速
 
 // 东财备份标的
@@ -152,13 +152,37 @@ function limitPct(code, name) {
 }
 function isLimitUp(pct, code, name) { return pct >= limitPct(code, name) - 0.3; }
 
+// ── 监控白名单：仅计算这些板块的宝妈指数（用户指定，2026-07-23）──
+// 恒生科技为指数，单独在顶部指数卡片跟踪，不计入股票板块篮子。
+const WATCHLIST = ['存储芯片', '半导体', 'CPO', 'PCB', '科创创业AI', '细分化工', '锂矿', '机器人', '创新药', '电力', '电网', '电池'];
+
+// 把单只股票归类到白名单板块（行业 + 名称关键词）；返回 null 表示不监控
+function classifySector(sb) {
+  const ind = (sb && sb.industry) || '';
+  const nm = (sb && sb.name) || '';
+  if (ind === '半导体' && /存储|兆易|君正|江波龙|佰维|普冉|聚辰|澜起|东芯|北京君正|国科微|景嘉微|复旦微|深科技|太极实业/.test(nm)) return '存储芯片';
+  if (ind === '半导体') return '半导体';
+  if (ind === '电网设备') return '电网';
+  if (ind === '电池') return '电池';
+  if (ind === '电力') return '电力';
+  if (['化学制品', '化学原料', '化学纤维', '农化制品', '塑料', '橡胶', '化学试剂'].includes(ind)) return '细分化工';
+  if (['化学制药', '生物制品', '中药Ⅱ'].includes(ind)) return '创新药';
+  if (ind === '能源金属' || /锂|赣锋|天齐|盐湖|盛新|融捷|永兴|中矿|雅化|天华|江特|藏格|钴|镍/.test(nm)) return '锂矿';
+  if (/cpo|光模块|中际旭创|新易盛|天孚|光迅|太辰|源杰|华工科技|剑桥科技|博创|兆龙|德科立|联特|铭普|罗博|锐捷|震有/.test(nm)) return 'CPO';
+  if (/pcb|电路板|深南电路|沪电|鹏鼎|胜宏|景旺|崇达|兴森|东山精密|超声电子|世运电路|澳弘|满坤|中富电路|金禄|四会富仕|本川/.test(nm)) return 'PCB';
+  if (/机器人|埃斯顿|拓斯达|汇川|绿的谐波|双环|中大力德|鸣志|柯力|埃夫特|新时达|克来|迈赫|江苏北人|拓普|三花|凯尔达|禾川|步科/.test(nm)) return '机器人';
+  if (/人工智能|大模型|算力|智算|寒武纪|海光|中科曙光|科大讯飞|金山办公|昆仑万维|万兴|拓维|浪潮|云从|汉王|商汤|虹软|格灵深瞳|当虹|云天励飞|海天瑞声|拓尔思|神州泰岳|三六零|视觉中国|人民网|新华网|中文在线/.test(nm)) return '科创创业AI';
+  return null;
+}
+
 // ── 个股日线聚合为板块 ──
-function aggregate(rows, sbMap) {
+function aggregate(rows, sbMap, classify) {
   const sec = {};
   for (const r of rows) {
     const sb = sbMap[r.ts_code];
-    if (!sb || !sb.industry) continue;
-    const ind = sb.industry;
+    if (!sb) continue;
+    const ind = classify ? classify(sb) : (sb.industry || null);
+    if (!ind) continue;
     if (!sec[ind]) sec[ind] = { ret: 0, amt: 0, up: 0, down: 0, total: 0, zt: 0, tNum: 0, tDen: 0, codes: [] };
     const s = sec[ind];
     const pct = Number(r.pct_chg) || 0;
@@ -250,7 +274,7 @@ async function ensureHistory(sbMap) {
       try {
         const rows = await fetchDaily(d);
         if (rows && rows.length) {
-          const agg = aggregate(rows, sbMap);
+          const agg = aggregate(rows, sbMap, classifySector);
           const entry = { date: d, ret: {}, amt: {} };
           for (const k in agg) { entry.ret[k] = agg[k].ret; entry.amt[k] = agg[k].amt; }
           hist.days.push(entry);
@@ -433,8 +457,9 @@ function buildRealtimeSec(map, sbMap) {
   for (const code in map) {
     const rt = map[code];
     const sb = sbMap[code];
-    if (!sb || !sb.industry) continue;
-    const ind = sb.industry;
+    if (!sb) continue;
+    const ind = classifySector(sb);
+    if (!ind) continue;
     if (!sec[ind]) sec[ind] = { ret: 0, amt: 0, up: 0, down: 0, total: 0, zt: 0, tNum: 0, tDen: 0, codes: [] };
     const s = sec[ind];
     const pct = (rt.current - rt.preClose) / rt.preClose * 100;
@@ -485,7 +510,8 @@ async function getSinaTodaySec(sbMap) {
   const symbols = [];
   for (const ts in sbMap) {
     const sb = sbMap[ts];
-    if (!sb.industry) continue;
+    if (!sb) continue;
+    if (!classifySector(sb)) continue; // 只取白名单成分股，降低新浪请求量/限频风险
     const sym = tsCodeToSina(ts);
     sinaSbMap[sym] = { ...sb, ts_code: ts };
     symbols.push(sym);
@@ -541,7 +567,7 @@ async function main() {
   } else {
     try {
       const rows = await fetchDaily(TODAY_YMD);
-      if (rows && rows.length) { todaySec = aggregate(rows, sbMap); console.log(`[today] ${TODAY_YMD} ${rows.length} 行, ${Object.keys(todaySec).length} 个行业`); }
+      if (rows && rows.length) { todaySec = aggregate(rows, sbMap, classifySector); console.log(`[today] ${TODAY_YMD} ${rows.length} 行, ${Object.keys(todaySec).length} 个板块`); }
       else console.log(`[today] ${TODAY_YMD} Tushare 无数据（未发布/非交易日？尝试新浪回补）`);
     } catch (e) { console.log(`[today] Tushare daily 失败(${e.message})，尝试新浪回补`); }
     if (!todaySec) {
@@ -564,7 +590,8 @@ async function main() {
           return { ...r, chg };
         })
         .sort((a, b) => b.total - a.total);
-      console.log(`[mama] 计算完成，板块数=${heatmapData.length}`);
+      heatmapData = heatmapData.filter((r) => WATCHLIST.includes(r.name)); // 仅保留白名单板块
+      console.log(`[mama] 计算完成，监控板块数=${heatmapData.length}`);
     } else console.log('[mama] 空结果，保留旧值');
   } else console.log('[mama] 今日无数据，保留旧 heatmapData');
 
@@ -593,7 +620,12 @@ async function main() {
     } catch (e) { console.log(`[em ${key}] 失败(${e.message})，保留旧值`); }
     await sleep(500);
   }
-  const valuationData = customFile.valuationData || prev.valuationData || BASELINE_CUSTOM.valuationData;
+  // 估值表仅保留白名单相关板块（名称映射到监控板块；恒生科技为指数，估值表单列）
+  const VAL_MAP = { '半导体设备': '半导体', '存储器/芯片': '存储芯片', '半导体产业': '半导体', '光模块CPO': 'CPO', '机器人概念': '机器人', '恒生科技': '恒生科技', '创新药': '创新药', '新能源电池': '电池' };
+  const rawVal = customFile.valuationData || prev.valuationData || BASELINE_CUSTOM.valuationData || [];
+  const _seen = new Set();
+  const valuationData = [];
+  rawVal.forEach((r) => { const w = VAL_MAP[r.name]; if (w && !_seen.has(w)) { _seen.add(w); valuationData.push({ ...r, name: w }); } });
 
   const updatedAt = `${bj.getUTCFullYear()}-${p(bj.getUTCMonth() + 1)}-${p(bj.getUTCDate())} ${p(bj.getUTCHours())}:${p(bj.getUTCMinutes())}:${p(bj.getUTCSeconds())}`;
 

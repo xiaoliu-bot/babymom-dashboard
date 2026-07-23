@@ -4,4 +4,7 @@ node_modules/
 *.log
 .DS_Store
 
+# 新浪实时 20 分钟运行时缓存，不入库，避免污染后续 CI 盘中快照
+cache/sina_realtime.json
+
 # 注意：data.json 不要忽略！它由 GitHub Action 生成并提交，GitHub Pages 需要它

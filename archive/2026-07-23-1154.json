@@ -238,5 +238,13 @@
       "pbPct": 48.2,
       "peChg": -1.8
     }
-  ]
+  ],
+  "meta": {
+    "session": "midday",
+    "sessionLabel": "午盘收盘",
+    "date": "2026-07-23",
+    "file": "archive/2026-07-23-1154.json",
+    "updatedAt": "2026-07-23 11:54:44",
+    "incomplete": false
+  }
 }
