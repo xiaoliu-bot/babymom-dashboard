@@ -1,0 +1,232 @@
+{
+  "updatedAt": "2026-08-04 19:48:05",
+  "session": "close",
+  "sessionLabel": "全日收盘",
+  "realtime": false,
+  "source": "tushare-free + tencent-index + tencent-valuation",
+  "indexData": {
+    "sse": {
+      "name": "上证指数",
+      "code": "sh000001",
+      "price": 3822.28,
+      "change": 12.62,
+      "pct": 0.33,
+      "date": ""
+    },
+    "ndx": {
+      "name": "纳斯达克100",
+      "code": "usNDX",
+      "price": 28776.8,
+      "change": 502.6,
+      "pct": 1.78,
+      "date": ""
+    },
+    "hstech": {
+      "name": "恒生科技指数",
+      "code": "hkHSTECH",
+      "price": 4885.61,
+      "change": 10,
+      "pct": 0.21,
+      "date": ""
+    }
+  },
+  "heatmapData": [
+    {
+      "name": "CPO",
+      "board": "CPO",
+      "ore": 88,
+      "dif": 13,
+      "wov": 100,
+      "dbu": 100,
+      "zt": 88,
+      "hs": 88,
+      "dis": 75,
+      "total": 79,
+      "chg": 12
+    },
+    {
+      "name": "科创创业AI",
+      "board": "科创创业AI",
+      "ore": 75,
+      "dif": 100,
+      "wov": 50,
+      "dbu": 50,
+      "zt": 50,
+      "hs": 50,
+      "dis": 63,
+      "total": 65,
+      "chg": 4
+    },
+    {
+      "name": "存储芯片",
+      "board": "存储芯片",
+      "ore": 50,
+      "dif": 63,
+      "wov": 75,
+      "dbu": 75,
+      "zt": 0,
+      "hs": 100,
+      "dis": 100,
+      "total": 62,
+      "chg": 10
+    },
+    {
+      "name": "PCB",
+      "board": "PCB",
+      "ore": 38,
+      "dif": 0,
+      "wov": 88,
+      "dbu": 88,
+      "zt": 100,
+      "hs": 75,
+      "dis": 88,
+      "total": 59,
+      "chg": 36
+    },
+    {
+      "name": "半导体",
+      "board": "半导体",
+      "ore": 63,
+      "dif": 38,
+      "wov": 63,
+      "dbu": 63,
+      "zt": 25,
+      "hs": 63,
+      "dis": 50,
+      "total": 55,
+      "chg": 6
+    },
+    {
+      "name": "创新药",
+      "board": "创新药",
+      "ore": 100,
+      "dif": 50,
+      "wov": 13,
+      "dbu": 25,
+      "zt": 63,
+      "hs": 25,
+      "dis": 25,
+      "total": 52,
+      "chg": -3
+    },
+    {
+      "name": "锂矿",
+      "board": "锂矿",
+      "ore": 25,
+      "dif": 88,
+      "wov": 25,
+      "dbu": 38,
+      "zt": 38,
+      "hs": 0,
+      "dis": 13,
+      "total": 34,
+      "chg": -11
+    },
+    {
+      "name": "细分化工",
+      "board": "细分化工",
+      "ore": 13,
+      "dif": 75,
+      "wov": 0,
+      "dbu": 0,
+      "zt": 75,
+      "hs": 13,
+      "dis": 38,
+      "total": 27,
+      "chg": -21
+    },
+    {
+      "name": "机器人",
+      "board": "机器人",
+      "ore": 0,
+      "dif": 25,
+      "wov": 38,
+      "dbu": 13,
+      "zt": 0,
+      "hs": 38,
+      "dis": 0,
+      "total": 18,
+      "chg": -29
+    }
+  ],
+  "valuationData": [
+    {
+      "name": "存储芯片",
+      "pe": 61.42,
+      "pePct": 95.48,
+      "pbPct": 99.48,
+      "peChg": 0
+    },
+    {
+      "name": "半导体",
+      "pe": 101.24,
+      "pePct": 94.56,
+      "pbPct": 97.54,
+      "peChg": 0
+    },
+    {
+      "name": "CPO",
+      "pe": 79.59,
+      "pePct": 86.58,
+      "pbPct": 99.32,
+      "peChg": 0
+    },
+    {
+      "name": "机器人",
+      "pe": 46.37,
+      "pePct": 72.3,
+      "pbPct": 78.5,
+      "peChg": 0
+    },
+    {
+      "name": "PCB",
+      "pe": 63.92,
+      "pePct": 50,
+      "pbPct": 50,
+      "peChg": 0
+    },
+    {
+      "name": "科创创业AI",
+      "pe": 54.56,
+      "pePct": 50,
+      "pbPct": 50,
+      "peChg": 0
+    },
+    {
+      "name": "细分化工",
+      "pe": 41.46,
+      "pePct": 50,
+      "pbPct": 50,
+      "peChg": 0
+    },
+    {
+      "name": "锂矿",
+      "pe": 22.32,
+      "pePct": 50,
+      "pbPct": 50,
+      "peChg": 0
+    },
+    {
+      "name": "恒生科技",
+      "pe": 32.5,
+      "pePct": 45.2,
+      "pbPct": 55.8,
+      "peChg": -3.4
+    },
+    {
+      "name": "创新药",
+      "pe": 26.63,
+      "pePct": 38.5,
+      "pbPct": 42.1,
+      "peChg": 0
+    }
+  ],
+  "meta": {
+    "session": "close",
+    "sessionLabel": "全日收盘",
+    "date": "2026-08-04",
+    "file": "archive/2026-08-04-1948.json",
+    "updatedAt": "2026-08-04 19:48:05",
+    "incomplete": false
+  }
+}

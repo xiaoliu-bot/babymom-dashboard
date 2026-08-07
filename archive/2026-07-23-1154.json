@@ -1,0 +1,250 @@
+{
+  "updatedAt": "2026-07-23 11:54:44",
+  "session": "midday",
+  "sessionLabel": "午盘收盘",
+  "realtime": true,
+  "source": "tushare-free + sina-realtime + eastmoney-backup",
+  "indexData": {
+    "sse": {
+      "name": "上证指数",
+      "code": "sh000001",
+      "price": 3859.69,
+      "change": -7.35,
+      "pct": -0.19,
+      "date": ""
+    },
+    "ndx": {
+      "name": "纳斯达克100",
+      "code": "NDX",
+      "price": 25690.9,
+      "change": -146.31,
+      "pct": -0.57,
+      "date": "2026-07-22"
+    },
+    "hstech": {
+      "name": "恒生科技",
+      "code": "HSTECH",
+      "price": 4703.88,
+      "change": 35.65,
+      "pct": 0.76,
+      "date": "2026-07-23"
+    }
+  },
+  "heatmapData": [
+    {
+      "name": "锂矿",
+      "board": "锂矿",
+      "ore": 64,
+      "dif": 82,
+      "wov": 45,
+      "dbu": 73,
+      "zt": 91,
+      "hs": 82,
+      "dis": 82,
+      "total": 71,
+      "chg": 0
+    },
+    {
+      "name": "电网",
+      "board": "电网",
+      "ore": 73,
+      "dif": 100,
+      "wov": 18,
+      "dbu": 36,
+      "zt": 100,
+      "hs": 55,
+      "dis": 55,
+      "total": 64,
+      "chg": 0
+    },
+    {
+      "name": "CPO",
+      "board": "CPO",
+      "ore": 45,
+      "dif": 55,
+      "wov": 73,
+      "dbu": 82,
+      "zt": 0,
+      "hs": 100,
+      "dis": 100,
+      "total": 60,
+      "chg": 0
+    },
+    {
+      "name": "电力",
+      "board": "电力",
+      "ore": 82,
+      "dif": 64,
+      "wov": 27,
+      "dbu": 64,
+      "zt": 82,
+      "hs": 0,
+      "dis": 9,
+      "total": 54,
+      "chg": 0
+    },
+    {
+      "name": "半导体",
+      "board": "半导体",
+      "ore": 55,
+      "dif": 9,
+      "wov": 82,
+      "dbu": 100,
+      "zt": 0,
+      "hs": 64,
+      "dis": 64,
+      "total": 52,
+      "chg": 0
+    },
+    {
+      "name": "存储芯片",
+      "board": "存储芯片",
+      "ore": 27,
+      "dif": 36,
+      "wov": 100,
+      "dbu": 55,
+      "zt": 0,
+      "hs": 91,
+      "dis": 91,
+      "total": 51,
+      "chg": 0
+    },
+    {
+      "name": "PCB",
+      "board": "PCB",
+      "ore": 36,
+      "dif": 18,
+      "wov": 91,
+      "dbu": 91,
+      "zt": 0,
+      "hs": 73,
+      "dis": 73,
+      "total": 50,
+      "chg": 0
+    },
+    {
+      "name": "创新药",
+      "board": "创新药",
+      "ore": 91,
+      "dif": 45,
+      "wov": 9,
+      "dbu": 18,
+      "zt": 64,
+      "hs": 27,
+      "dis": 27,
+      "total": 48,
+      "chg": 0
+    },
+    {
+      "name": "科创创业AI",
+      "board": "科创创业AI",
+      "ore": 100,
+      "dif": 0,
+      "wov": 55,
+      "dbu": 0,
+      "zt": 0,
+      "hs": 45,
+      "dis": 45,
+      "total": 44,
+      "chg": 0
+    },
+    {
+      "name": "电池",
+      "board": "电池",
+      "ore": 9,
+      "dif": 91,
+      "wov": 36,
+      "dbu": 45,
+      "zt": 55,
+      "hs": 36,
+      "dis": 36,
+      "total": 41,
+      "chg": 0
+    },
+    {
+      "name": "细分化工",
+      "board": "细分化工",
+      "ore": 18,
+      "dif": 73,
+      "wov": 0,
+      "dbu": 9,
+      "zt": 73,
+      "hs": 18,
+      "dis": 18,
+      "total": 29,
+      "chg": 0
+    },
+    {
+      "name": "机器人",
+      "board": "机器人",
+      "ore": 0,
+      "dif": 27,
+      "wov": 64,
+      "dbu": 27,
+      "zt": 0,
+      "hs": 9,
+      "dis": 0,
+      "total": 20,
+      "chg": 0
+    }
+  ],
+  "valuationData": [
+    {
+      "name": "半导体",
+      "pe": 166.96,
+      "pePct": 96.36,
+      "pbPct": 99.36,
+      "peChg": -7.5
+    },
+    {
+      "name": "存储芯片",
+      "pe": 141.01,
+      "pePct": 95.48,
+      "pbPct": 99.48,
+      "peChg": -6.8
+    },
+    {
+      "name": "CPO",
+      "pe": 71.92,
+      "pePct": 86.58,
+      "pbPct": 99.32,
+      "peChg": -9.6
+    },
+    {
+      "name": "机器人",
+      "pe": 58.4,
+      "pePct": 72.3,
+      "pbPct": 78.5,
+      "peChg": 2.1
+    },
+    {
+      "name": "恒生科技",
+      "pe": 32.5,
+      "pePct": 45.2,
+      "pbPct": 55.8,
+      "peChg": -3.4
+    },
+    {
+      "name": "创新药",
+      "pe": 38.7,
+      "pePct": 38.5,
+      "pbPct": 42.1,
+      "peChg": 1.2
+    },
+    {
+      "name": "电池",
+      "pe": 28.9,
+      "pePct": 35.6,
+      "pbPct": 48.2,
+      "peChg": -1.8
+    }
+  ],
+  "meta": {
+    "session": "midday",
+    "sessionLabel": "午盘收盘",
+    "date": "2026-07-23",
+    "file": "archive/2026-07-23-1154.json",
+    "updatedAt": "2026-07-23 11:54:44",
+    "incomplete": false
+  }
+}
