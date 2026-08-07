@@ -1,0 +1,43 @@
+name: 刷新看板数据
+
+on:
+  schedule:
+    # 午盘收盘：03:35 UTC = 北京时间 11:35（仅工作日）
+    - cron: '35 3 * * 1-5'
+    # 全日收盘：07:30 UTC = 北京时间 15:30（A股收盘后半小时，确保 daily 已发布），仅工作日
+    - cron: '30 7 * * 1-5'
+    # 美股收盘：21:35 UTC = 北京时间次日 05:35（美东 16:00 收盘后，兼顾夏令时/冬令时），刷新纳指100/恒生科技真实涨跌幅，避免 CI 在美股休市时段取到 change=0
+    - cron: '35 21 * * 1-5'
+  workflow_dispatch: {} # 支持在 GitHub 页面手动触发
+
+permissions:
+  contents: write # 允许 Action 把生成的 data.json 提交回仓库
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 安装 Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 拉取数据并生成 data.json
+        env:
+          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+        run: node scripts/fetch_data.js
+
+      - name: 提交 data.json 与归档（缓存不入库）
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json archive
+          if git diff --cached --quiet; then
+            echo "数据无变化，跳过提交"
+          else
+            git commit -m "chore(data): 自动刷新看板数据 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi

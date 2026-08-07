@@ -1,0 +1,15 @@
+# 本地工具/缓存，不入库
+.workbuddy/
+node_modules/
+*.log
+.DS_Store
+
+# 运行时缓存（由 scripts/fetch_data.js 生成，不入库）
+cache/
+
+# 一次性打包素材（非站点资源，仅本地用）
+splash-donate-embed/
+splash-donate-embed.zip
+splash-donate-kit.zip
+
+# 注意：data.json 不要忽略！它由 GitHub Action 生成并提交，GitHub Pages 需要它

@@ -1,0 +1,211 @@
+{
+  "updatedAt": "2026-07-30 19:24:32",
+  "session": "close",
+  "sessionLabel": "全日收盘",
+  "realtime": false,
+  "source": "tushare-free",
+  "indexData": {
+    "sse": {
+      "name": "上证指数",
+      "code": "sh000001",
+      "price": 3804.69,
+      "change": -23.78,
+      "pct": -0.62,
+      "date": ""
+    },
+    "ndx": {
+      "name": "纳斯达克100",
+      "code": "NDX",
+      "price": 24876.91,
+      "change": -55.17,
+      "pct": -0.22,
+      "date": "2026-07-28"
+    },
+    "hstech": {
+      "name": "恒生科技",
+      "code": "HSTECH",
+      "price": 4864.73,
+      "change": 134.12,
+      "pct": 2.84,
+      "date": "2026-07-29"
+    }
+  },
+  "heatmapData": [
+    {
+      "name": "存储芯片",
+      "board": "存储芯片",
+      "ore": 88,
+      "dif": 100,
+      "wov": 100,
+      "dbu": 88,
+      "zt": 0,
+      "hs": 0,
+      "dis": 0,
+      "total": 68,
+      "chg": 3
+    },
+    {
+      "name": "半导体",
+      "board": "半导体",
+      "ore": 75,
+      "dif": 25,
+      "wov": 63,
+      "dbu": 100,
+      "zt": 75,
+      "hs": 0,
+      "dis": 75,
+      "total": 55,
+      "chg": -19
+    },
+    {
+      "name": "锂矿",
+      "board": "锂矿",
+      "ore": 63,
+      "dif": 88,
+      "wov": 25,
+      "dbu": 63,
+      "zt": 0,
+      "hs": 0,
+      "dis": 0,
+      "total": 43,
+      "chg": -11
+    },
+    {
+      "name": "CPO",
+      "board": "CPO",
+      "ore": 100,
+      "dif": 0,
+      "wov": 88,
+      "dbu": 0,
+      "zt": 0,
+      "hs": 0,
+      "dis": 0,
+      "total": 42,
+      "chg": -19
+    },
+    {
+      "name": "创新药",
+      "board": "创新药",
+      "ore": 25,
+      "dif": 75,
+      "wov": 13,
+      "dbu": 50,
+      "zt": 100,
+      "hs": 0,
+      "dis": 100,
+      "total": 38,
+      "chg": -2
+    },
+    {
+      "name": "科创创业AI",
+      "board": "科创创业AI",
+      "ore": 50,
+      "dif": 63,
+      "wov": 38,
+      "dbu": 25,
+      "zt": 0,
+      "hs": 0,
+      "dis": 0,
+      "total": 34,
+      "chg": -9
+    },
+    {
+      "name": "PCB",
+      "board": "PCB",
+      "ore": 38,
+      "dif": 0,
+      "wov": 75,
+      "dbu": 75,
+      "zt": 0,
+      "hs": 0,
+      "dis": 0,
+      "total": 31,
+      "chg": -19
+    },
+    {
+      "name": "机器人",
+      "board": "机器人",
+      "ore": 13,
+      "dif": 38,
+      "wov": 50,
+      "dbu": 38,
+      "zt": 0,
+      "hs": 0,
+      "dis": 0,
+      "total": 23,
+      "chg": -6
+    },
+    {
+      "name": "细分化工",
+      "board": "细分化工",
+      "ore": 0,
+      "dif": 50,
+      "wov": 0,
+      "dbu": 0,
+      "zt": 88,
+      "hs": 0,
+      "dis": 88,
+      "total": 18,
+      "chg": -11
+    }
+  ],
+  "valuationData": [
+    {
+      "name": "半导体",
+      "pe": 166.96,
+      "pePct": 96.36,
+      "pbPct": 99.36,
+      "peChg": -7.5
+    },
+    {
+      "name": "存储芯片",
+      "pe": 141.01,
+      "pePct": 95.48,
+      "pbPct": 99.48,
+      "peChg": -6.8
+    },
+    {
+      "name": "CPO",
+      "pe": 71.92,
+      "pePct": 86.58,
+      "pbPct": 99.32,
+      "peChg": -9.6
+    },
+    {
+      "name": "机器人",
+      "pe": 58.4,
+      "pePct": 72.3,
+      "pbPct": 78.5,
+      "peChg": 2.1
+    },
+    {
+      "name": "恒生科技",
+      "pe": 32.5,
+      "pePct": 45.2,
+      "pbPct": 55.8,
+      "peChg": -3.4
+    },
+    {
+      "name": "创新药",
+      "pe": 38.7,
+      "pePct": 38.5,
+      "pbPct": 42.1,
+      "peChg": 1.2
+    },
+    {
+      "name": "电池",
+      "pe": 28.9,
+      "pePct": 35.6,
+      "pbPct": 48.2,
+      "peChg": -1.8
+    }
+  ],
+  "meta": {
+    "session": "close",
+    "sessionLabel": "全日收盘",
+    "date": "2026-07-30",
+    "file": "archive/2026-07-30-1925.json",
+    "updatedAt": "2026-07-30 19:24:32",
+    "incomplete": false
+  }
+}

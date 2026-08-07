@@ -1,0 +1,4 @@
+{
+  "_说明": "估值表已自动化（v5）：腾讯实时 PE/PB（f[39]/f[46]）→ 板块市值加权 → 自采集历史百分位（cache/sector_valuation_history.json），免费且海外服务器可直连，无需手动维护。本文件仅作「可选手动钉值」：如需强制某板块估值，加 valuationData:[{name:'半导体设备', pe:.., pePct:.., pbPct:.., peChg:..}]（name 经 VAL_MAP 映射到监控板块，如 '半导体设备'→'半导体'）；不写则全部走自动化。heatmapData 已由脚本实时计算，此处不再生效，已移除。",
+  "valuationData": []
+}
