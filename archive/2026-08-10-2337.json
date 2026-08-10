@@ -204,5 +204,13 @@
       "pbPct": null,
       "peChg": null
     }
-  ]
+  ],
+  "meta": {
+    "session": "close",
+    "sessionLabel": "全日收盘",
+    "date": "2026-08-10",
+    "file": "archive/2026-08-10-2337.json",
+    "updatedAt": "2026-08-10 23:36:55",
+    "incomplete": false
+  }
 }
