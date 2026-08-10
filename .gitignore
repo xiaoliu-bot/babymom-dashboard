@@ -4,8 +4,10 @@ node_modules/
 *.log
 .DS_Store
 
-# 运行时缓存（由 scripts/fetch_data.js 生成，不入库）
-cache/
+# 运行时缓存（由 scripts/fetch_data.js 生成）
+# 仅忽略临时实时行情转储；CI 必需输入（股票篮子/历史缓存）必须入库，否则刷新会因缺数据而崩溃
+cache/sina_realtime.json
+cache/tencent_realtime.json
 
 # 一次性打包素材（非站点资源，仅本地用）
 splash-donate-embed/
