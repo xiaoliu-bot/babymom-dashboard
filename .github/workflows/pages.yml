@@ -16,6 +16,11 @@ on:
       - 'archive/**'
       - '.nojekyll'
       - '.github/workflows/pages.yml'
+  # 关键修复：refresh.yml 用 GITHUB_TOKEN 推送 data.json 不会触发上面的 on:push
+  # （GitHub 防递归限制），故改用 workflow_run —— 每次「刷新看板数据」成功即自动重建部署
+  workflow_run:
+    workflows: ["刷新看板数据"]
+    types: [completed]
   workflow_dispatch:  # 支持手动触发重新部署
 
 permissions:
@@ -27,6 +32,8 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    # 仅在 refresh 成功时才部署（失败则不重建）
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
