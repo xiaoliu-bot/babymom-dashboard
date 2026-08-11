@@ -2,12 +2,15 @@ name: 刷新看板数据
 
 on:
   schedule:
-    # 午盘收盘：03:35 UTC = 北京时间 11:35（仅工作日）
-    - cron: '35 3 * * 1-5'
-    # 全日收盘：07:00 UTC = 北京时间 15:00（A股收盘，实时行情即收盘真实价；daily 未发布时自动回退实时），仅工作日
-    - cron: '0 7 * * 1-5'
-    # 美股收盘：21:35 UTC = 北京时间次日 05:35（美东 16:00 收盘后，兼顾夏令时/冬令时），刷新纳指100/恒生科技真实涨跌幅，避免 CI 在美股休市时段取到 change=0
-    - cron: '35 21 * * 1-5'
+    # 午盘收盘：北京时间 11:35（仅工作日）
+    - cron: '35 11 * * 1-5'
+      timezone: Asia/Shanghai
+    # 全日收盘：北京时间 15:00（A股收盘），仅工作日
+    - cron: '0 15 * * 1-5'
+      timezone: Asia/Shanghai
+    # 美股收盘：北京时间次日 05:35（美东 16:00 收盘后），刷新纳指100/恒生科技真实涨跌幅
+    - cron: '35 5 * * 2-6'
+      timezone: Asia/Shanghai
   workflow_dispatch: {} # 支持在 GitHub 页面手动触发
 
 permissions:
@@ -27,6 +30,7 @@ jobs:
 
       - name: 拉取数据并生成 data.json
         env:
+          TZ: Asia/Shanghai          # Node new Date() 返回北京时间，消除手动偏移
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
         run: node scripts/fetch_data.js
 
@@ -38,6 +42,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "数据无变化，跳过提交"
           else
-            git commit -m "chore(data): 自动刷新看板数据 $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "chore(data): 自动刷新看板数据 $(TZ=Asia/Shanghai date '+%Y-%m-%dT%H:%M:%S+08:00')"
             git push
           fi

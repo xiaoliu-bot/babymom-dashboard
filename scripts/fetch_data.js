@@ -102,10 +102,11 @@ function writeJsonSafe(p, o) { fs.mkdirSync(path.dirname(p), { recursive: true }
 
 // ── 归档：每次运行留存一份快照，供前端回溯 ──
 function writeArchive(out, session, sessionLabel, updatedAt, incomplete) {
-  const bj = new Date(Date.now() + 8 * 3600000);
+  // CI 环境已设 TZ=Asia/Shanghai，new Date() 直接返回北京时间；本地运行同理依赖系统时区
+  const now = new Date();
   const p = (n) => String(n).padStart(2, '0');
-  const datePart = `${bj.getUTCFullYear()}-${p(bj.getUTCMonth() + 1)}-${p(bj.getUTCDate())}`;
-  const fileBase = `${datePart}-${p(bj.getUTCHours())}${p(bj.getUTCMinutes())}`;
+  const datePart = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
+  const fileBase = `${datePart}-${p(now.getHours())}${p(now.getMinutes())}`;
   const relFile = `archive/${fileBase}.json`;
   fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
   const archObj = { ...out, meta: { session, sessionLabel, date: datePart, file: relFile, updatedAt, incomplete } };
@@ -677,7 +678,7 @@ async function getTencentTodaySec(sbMap) {
 }
 // 腾讯实时 → 指数卡片（上证/纳指100/恒生科技；返回 {sse,ndx,hstech}）
 async function fetchTencentIndices(todayYmd) {
-  const idxDate = todayYmd || ymd(new Date(Date.now() + 8 * 3600000)); // 默认北京时间当日
+  const idxDate = todayYmd || ymd(new Date()); // 默认当日（TZ=Asia/Shanghai 时为北京时间）
   const syms = Object.values(TENCENT_IDX);
   try {
     const txt = await tencentFetchText(TENCENT_QUOTE + syms.join(','));
@@ -828,15 +829,15 @@ async function main() {
   const customPath = path.join(ROOT, 'custom-data.json');
   const prev = readJsonSafe(dataPath) || {};
   const customFile = readJsonSafe(customPath) || {};
-  const today = new Date();
-  const bj = new Date(today.getTime() + 8 * 3600000);
+  // CI 环境已设 TZ=Asia/Shanghai，new Date() 直接返回北京时间
+  const now = new Date();
   const p = (n) => String(n).padStart(2, '0');
-  const TODAY_YMD = ymd(today);
-  const begDate = new Date(today.getTime() - 200 * 86400000);
+  const TODAY_YMD = ymd(now);
+  const begDate = new Date(now.getTime() - 200 * 86400000);
   const beg = ymd(begDate);
 
   // 会话判定：午盘收盘(<12点北京时间) / 全日收盘(>=12点)；env SESSION 可强制覆盖
-  const SESSION = process.env.SESSION || (bj.getUTCHours() < 12 ? 'midday' : 'close');
+  const SESSION = process.env.SESSION || (now.getHours() < 12 ? 'midday' : 'close');
   const SESSION_LABEL = SESSION === 'midday' ? '午盘收盘' : '全日收盘';
 
   // 主力：Tushare 列表/历史（缓存 7 天 + 限流退避保护）
@@ -973,7 +974,7 @@ async function main() {
     console.log('[val] 自动化失败，估值表留空（不展示伪分位）');
   }
 
-  const updatedAt = `${bj.getUTCFullYear()}-${p(bj.getUTCMonth() + 1)}-${p(bj.getUTCDate())} ${p(bj.getUTCHours())}:${p(bj.getUTCMinutes())}:${p(bj.getUTCSeconds())}`;
+  const updatedAt = `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
 
   // 数据源标记（非大陆 IP 时东财/股吧默认关闭，仅标注实际生效来源）
   const srcParts = ['tushare-free'];
