@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小白指数看板 | 大盘数据监控</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #21262d;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; color: #f0f6fc; }
+  .header .subtitle { font-size: 13px; color: #8b949e; margin-top: 6px; }
+  .header .tag {
+    display: inline-block;
+    background: #1f6feb;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 10px;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .hist-label { font-size: 13px; color: #8b949e; }
+  #history-select {
+    background: #21262d; color: #e6edf3; border: 1px solid #30363d;
+    border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; max-width: 220px;
+  }
+  #history-select:hover { border-color: #8b949e; }
+  #history-select:focus { outline: none; border-color: #1f6feb; }
+  #status-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #238636; display: inline-block;
+    box-shadow: 0 0 8px currentColor;
+  }
+  #refresh-btn {
+    background: #21262d; color: #e6edf3;
+    border: 1px solid #30363d; border-radius: 8px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  #refresh-btn:hover:not(:disabled) { background: #30363d; border-color: #8b949e; }
+  #refresh-btn:disabled { opacity: 0.6; cursor: default; }
+  #refresh-btn .ico { display: inline-block; }
+  #refresh-btn.spinning .ico { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px; height: 14px;
+    background: #1f6feb; border-radius: 2px;
+  }
+
+  /* 三大指数卡片 */
+  .index-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  .index-card {
+    background: #161b22; border: 1px solid #21262d; border-radius: 10px;
+    padding: 18px 14px; text-align: center;
+  }
+  .index-card .idx-name { font-size: 12px; color: #8b949e; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
+  .index-card .idx-price { font-size: 22px; font-weight: 700; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .index-card .idx-change { font-size: 13px; font-weight: 600; }
+  .index-card .idx-desc { font-size: 11px; color: #484f58; margin-top: 4px; }
+  .up { color: #f85149; }   /* A股红涨 */
+  .down { color: #3fb950; } /* A股绿跌 */
+
+  /* 热力图 */
+  .heatmap-grid { display: grid; grid-template-columns: 100px repeat(6, 1fr); gap: 2px; font-size: 11px; text-align: center; }
+  .heatmap-header { color: #8b949e; font-weight: 600; padding: 6px 4px; font-size: 10px; }
+  .heatmap-sector { color: #e6edf3; text-align: left; padding: 8px 8px; font-size: 12px; display: flex; align-items: center; }
+  .heatmap-cell { padding: 6px 4px; border-radius: 4px; font-size: 12px; font-weight: 700; cursor: default; transition: transform 0.1s; }
+  .heatmap-cell:hover { transform: scale(1.05); }
+  .heatmap-total { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; color: #fff; font-size: 13px; font-weight: 700; }
+  .heatmap-total .chg { font-size: 10px; font-weight: 400; opacity: 0.8; }
+
+  .legend { display: flex; gap: 12px; margin-top: 14px; font-size: 11px; color: #8b949e; flex-wrap: wrap; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* 表格 */
+  table.score-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.score-table th { color: #8b949e; font-weight: 600; text-align: right; padding: 6px 8px; border-bottom: 1px solid #21262d; text-transform: uppercase; font-size: 10px; }
+  table.score-table th:first-child { text-align: left; }
+  table.score-table td { padding: 7px 8px; border-bottom: 1px solid #161b22; text-align: right; }
+  table.score-table td:first-child { text-align: left; font-weight: 600; }
+  table.score-table tr:hover td { background: #1c2128; }
+
+  .single-full { display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; }
+  .single-full .card canvas { display: block; }
+  canvas { max-width: 100%; }
+
+  .footer { text-align: center; font-size: 11px; color: #484f58; margin-top: 24px; padding-top: 12px; border-top: 1px solid #21262d; }
+
+  @media (max-width: 880px) {
+    .grid, .index-row { grid-template-columns: 1fr; }
+  }
+
+  /* ── 开屏赞赏海报（iframe 载入 donate.html，样式隔离）── */
+  html.splash-dismissed #splash { display: none; }
+  #splash { position: fixed; inset: 0; z-index: 9999; background: #0d1117; }
+  #splash iframe { width: 100%; height: 100%; border: 0; display: block; background: transparent; }
+  #splash .enter-btn {
+    position: absolute; left: 50%; bottom: 30px; transform: translateX(-50%);
+    z-index: 2;
+    background: #1f6feb; color: #fff; border: 0; border-radius: 999px;
+    padding: 12px 30px; font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45); transition: background 0.15s;
+  }
+  #splash .enter-btn:hover { background: #388bfd; }
+
+  /* 右下角常驻赞赏按钮：开屏关闭后可见，点击重新唤起海报 */
+  #donate-fab {
+    position: fixed; right: 22px; bottom: 22px; z-index: 50;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #fb7185, #f43f5e);
+    color: #fff; border: 0; border-radius: 999px;
+    padding: 11px 18px; font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 8px 22px rgba(244,63,94,0.45);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #donate-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(244,63,94,0.55); }
+  #donate-fab:active { transform: translateY(0); }
+</style>
+<script>
+  // 开屏赞赏海报：进入看板 / Esc 关闭（仅本次访问）；右下角赞赏按钮可随时重新唤起
+  (function () {
+    var root = document.documentElement;
+    function dismissSplash() { root.classList.add('splash-dismissed'); }
+    function openSplash() { root.classList.remove('splash-dismissed'); }
+    document.addEventListener('DOMContentLoaded', function () {
+      var enter = document.getElementById('splash-enter');
+      if (enter) enter.addEventListener('click', dismissSplash);
+      var fab = document.getElementById('donate-fab');
+      if (fab) fab.addEventListener('click', openSplash);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') dismissSplash();
+      });
+    });
+  })();
+</script>
+</head>
+<body>
+
+<!-- 开屏赞赏海报（iframe 载入 donate.html，样式与主页隔离） -->
+<div id="splash">
+  <iframe src="donate.html" title="赞赏海报"></iframe>
+  <button class="enter-btn" id="splash-enter">进入看板 →</button>
+</div>
+
+<!-- 顶部 -->
+<div class="header">
+  <div>
+    <h1>📊 小白指数看板 <span class="tag">v3.0 · 在线版</span></h1>
+    <div class="subtitle" id="update-time">数据更新时间：— &nbsp;|&nbsp; 初始化中…</div>
+  </div>
+  <div class="header-right">
+    <span id="status-dot" title="数据状态"></span>
+    <span class="hist-label">回溯</span>
+    <select id="history-select" title="回溯历史快照">
+      <option value="latest">最新（实时）</option>
+    </select>
+    <button id="refresh-btn" title="手动刷新数据"><span class="ico">⟳</span> 刷新</button>
+  </div>
+</div>
+
+<!-- 三大指数摘要（红涨绿跌，A股习惯） -->
+<div class="index-row">
+  <div class="index-card">
+    <div class="idx-name">📈 上证指数</div>
+    <div class="idx-price" id="idx-sse-price">—</div>
+    <div class="idx-change" id="idx-sse-change">—</div>
+    <div class="idx-desc">A股主板</div>
+  </div>
+  <div class="index-card">
+    <div class="idx-name">🌐 纳斯达克100</div>
+    <div class="idx-price" id="idx-ndx-price">—</div>
+    <div class="idx-change" id="idx-ndx-change">—</div>
+    <div class="idx-desc">美股科技</div>
+  </div>
+  <div class="index-card">
+    <div class="idx-name">💹 恒生科技</div>
+    <div class="idx-price" id="idx-hstech-price">—</div>
+    <div class="idx-change" id="idx-hstech-change">—</div>
+    <div class="idx-desc">港股科技</div>
+  </div>
+</div>
+
+<!-- 热力图 + 估值表 -->
+<div class="grid">
+  <div class="card">
+    <div class="card-title">🔥 板块小白指数热力图（按总分排序）</div>
+    <div class="heatmap-grid" id="heatmap-container"></div>
+    <div class="legend">
+      <span><span class="legend-dot" style="background:#da3633"></span> &gt;100 情绪极端</span>
+      <span><span class="legend-dot" style="background:#d29922"></span> 80~100 偏高</span>
+      <span><span class="legend-dot" style="background:#238636"></span> &lt;80 正常</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📈 板块估值对比（PE/PB历史百分位）</div>
+    <table class="score-table" id="valuation-table">
+      <thead>
+        <tr><th>板块</th><th>PE-TTM</th><th>PE%位</th><th>PB%位</th><th>周环比</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 板块总分排名（横向柱状图） -->
+<div class="single-full">
+  <div class="card">
+    <div class="card-title">📊 各板块小白指数总分排名</div>
+    <canvas id="barChart" height="320"></canvas>
+  </div>
+</div>
+
+<div class="footer">
+  免责声明：本看板数据仅供参考，不构成投资建议。
+</div>
+
+<!-- 右下角常驻赞赏按钮 -->
+<button id="donate-fab" title="赞赏支持">♥ 赞赏</button>
+
+<!-- 配置必须在 app.js 之前加载 -->
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
